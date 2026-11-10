@@ -32,9 +32,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { arch: arm64, runner: macos-15 }
-          - { arch: x86_64, runner: macos-13 }
+        # arm64 runs on every trigger; x86_64 only on a manual run
+        # (Actions tab -> build -> Run workflow, or `gh workflow run build`).
+        include: >-
+          ${{ fromJSON(github.event_name == 'workflow_dispatch'
+          && '[{"arch":"arm64","runner":"macos-15"},{"arch":"x86_64","runner":"macos-13"}]'
+          || '[{"arch":"arm64","runner":"macos-15"}]') }}
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies

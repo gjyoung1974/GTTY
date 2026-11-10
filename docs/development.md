@@ -66,19 +66,13 @@ The [architecture notes](ARCHITECTURE.md) describe the signal path, each demodul
 
 ## This manual
 
-The manual is Markdown under `docs/` and is published with GitHub Pages using the [Just the Docs](https://just-the-docs.com/) theme. Each page has a front-matter block with its title and `nav_order`. Links between pages use relative `.md` paths, which GitHub Pages rewrites, so the pages read correctly both on the site and in the repository. To preview locally:
+The manual is Markdown under `docs/` and is published to the [GitHub wiki](https://github.com/gjyoung1974/GTTY/wiki), which is the page the Help item in the application opens. Each page has a front-matter block with its title and `nav_order`; the title becomes the wiki page name and `nav_order` sets its place in the sidebar. Links between pages use relative `.md` paths, so the pages also read correctly in the repository.
+
+`tools/build_wiki.py` converts the pages (page links, images and the `{: .note }` style callouts) and the `wiki` workflow pushes the result to the wiki whenever `docs/` changes on `main`. Edit the files in `docs/`, not the wiki: pages edited on the wiki are overwritten by the next run. To preview the generated pages locally:
 
 ```
-cd docs
-cat > Gemfile <<'G'
-source "https://rubygems.org"
-gem "github-pages", group: :jekyll_plugins
-G
-bundle install
-bundle exec jekyll serve
+python3 tools/build_wiki.py /tmp/gtty-wiki
 ```
-
-and open `http://127.0.0.1:4000/GTTY/`. The Gemfile is ignored by the site build.
 
 ## Licence
 

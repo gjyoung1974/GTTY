@@ -1,0 +1,50 @@
+name: wiki
+
+# Publishes the user manual in docs/ to the GitHub wiki, which is what the
+# Help item in the application opens.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'tools/build_wiki.py'
+      - '.github/workflows/wiki.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish docs/ to the wiki
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate wiki pages
+        run: python3 tools/build_wiki.py "$RUNNER_TEMP/pages" --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME"
+      - name: Push to the wiki
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          wiki="$RUNNER_TEMP/wiki"
+          if ! git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" "$wiki"; then
+            echo "::error::The wiki has no pages yet. Create a first page at ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/wiki/_new (any content), then re-run this workflow."
+            exit 1
+          fi
+          # The wiki mirrors docs/: pages removed there are removed here.
+          find "$wiki" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp "$RUNNER_TEMP"/pages/* "$wiki"/
+          cd "$wiki"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki already up to date."
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "Update from ${GITHUB_SHA}"
+          git push
