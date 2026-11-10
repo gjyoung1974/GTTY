@@ -66,6 +66,12 @@ for d in "$BREW/lib/gdk-pixbuf-2.0/2.10.0/loaders" "$(pkg-config --variable=gdk_
   done
 done
 chmod -R u+w "$C"
+# Homebrew ships each loader twice (foo.dylib plus a foo.so alias) and cp -L turned the
+# alias into a second copy. gdk-pixbuf only scans *.so, so keep that one.
+for f in "$LOADERS"/*.dylib; do
+  [ -e "$f" ] || continue
+  if [ -e "${f%.dylib}.so" ]; then rm -f "$f"; else mv "$f" "${f%.dylib}.so"; fi
+done
 QUERY="$(command -v gdk-pixbuf-query-loaders || true)"
 [ -n "$QUERY" ] && cp -L "$QUERY" "$C/MacOS/gdk-pixbuf-query-loaders" && chmod u+w "$C/MacOS/gdk-pixbuf-query-loaders"
 
@@ -78,6 +84,13 @@ done
 # stdin from /dev/null: dylibbundler prompts when it cannot find a library; fail instead.
 dylibbundler -of -b "${FIX[@]}" -d "$C/Frameworks" -p @executable_path/../Frameworks/ \
   -s "$BREW/lib" </dev/null
+# dylibbundler rewrites what the loaders link against but not their own install name
+# (LC_ID_DYLIB), which still says /opt/homebrew/...; they are dlopen()ed by path, so
+# any bundle-relative id will do.
+for f in "$LOADERS"/*; do
+  [ -e "$f" ] || continue
+  [ -n "$(otool -D "$f" | tail -n +2)" ] && install_name_tool -id "@loader_path/$(basename "$f")" "$f"
+done
 
 # --- Launcher: point GLib/GTK at the bundled resources, then run the GUI.
 cat > "$C/MacOS/gtty" <<'LAUNCHER'
