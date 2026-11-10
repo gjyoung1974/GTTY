@@ -1,0 +1,41 @@
+# GitHub Pages site for the gtty user manual.
+# Served from the docs/ folder of the main branch (Settings → Pages → Deploy from a branch → main, /docs).
+title: gtty
+description: Amateur radio RTTY terminal for the Linux desktop
+url: https://gjyoung1974.github.io
+baseurl: /GTTY
+
+remote_theme: just-the-docs/just-the-docs
+plugins:
+  - jekyll-remote-theme
+  - jekyll-relative-links
+
+search_enabled: true
+heading_anchors: true
+color_scheme: light
+logo: /gtty-logo.svg
+
+aux_links:
+  gtty on GitHub: https://github.com/gjyoung1974/GTTY
+  Releases: https://github.com/gjyoung1974/GTTY/releases
+aux_links_new_tab: true
+
+footer_content: "gtty is free software under the GPL-3.0-or-later licence. Written by WA8Q."
+
+callouts_level: quiet
+callouts:
+  note:
+    title: Note
+    color: blue
+  tip:
+    title: Tip
+    color: green
+  warning:
+    title: Warning
+    color: red
+
+exclude:
+  - TODO.md
+  - Gemfile
+  - Gemfile.lock
+  - vendor/

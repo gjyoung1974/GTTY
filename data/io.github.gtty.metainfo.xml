@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.gtty</id>
+  <name>gtty</name>
+  <summary>Amateur radio RTTY terminal</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <description>
+    <p>RTTY terminal for the Linux desktop with parallel decoders, waterfall and XY-scope tuning,
+    AFSK and true FSK keying, Hamlib rig control, logging with ADIF export, GridTracker2 integration
+    and an fldigi-compatible XML-RPC interface for loggers.</p>
+  </description>
+  <launchable type="desktop-id">io.github.gtty.desktop</launchable>
+  <url type="homepage">https://github.com/gjyoung1974/gtty</url>
+  <url type="bugtracker">https://github.com/gjyoung1974/gtty/issues</url>
+  <developer id="io.github.gtty"><name>gtty contributors</name></developer>
+  <categories><category>HamRadio</category></categories>
+  <content_rating type="oars-1.1"/>
+  <provides><binary>gtty</binary><binary>gtty-cli</binary></provides>
+  <releases>
+    <release version="0.1.0" date="2026-11-08"/>
+  </releases>
+</component>

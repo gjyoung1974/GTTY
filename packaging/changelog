@@ -1,0 +1,6 @@
+gtty (0.1.0) unstable; urgency=medium
+
+  * Initial release: RTTY modem with parallel decoders, GTK4 UI, Hamlib rig
+    control, AFSK/FSK keying, logging, GridTracker2 and XML-RPC integration.
+
+ -- Gordon Young <gjyoung1974@gmail.com>  Sun, 08 Nov 2026 12:00:00 +0000

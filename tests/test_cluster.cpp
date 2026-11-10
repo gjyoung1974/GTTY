@@ -1,0 +1,39 @@
+// DX cluster spot-line parsing and the RTTY filter.
+#include "core/net/cluster_client.h"
+#include "check.h"
+
+using namespace gtty;
+
+int main() {
+  Spot s;
+  CHECK(parseSpotLine("DX de W1AW:     14083.5  DL1ABC       RTTY cq                   1234Z FN31", s));
+  CHECK_EQ(s.spotter, std::string("W1AW"));
+  CHECK_EQ(s.call, std::string("DL1ABC"));
+  CHECK_EQ(s.freqHz, 14083500.0);
+  CHECK_EQ(s.comment, std::string("RTTY cq"));
+  CHECK_EQ(s.timeUtc, std::string("12:34"));
+  CHECK(s.receivedAt > 0);
+  CHECK(looksLikeRtty(s));
+
+  // No comment, no locator, lower-case prefix, CR/LF noise.
+  CHECK(parseSpotLine("dx de k1ttt-#:  7045.0  JA1XYZ                                    0001Z\r\n", s));
+  CHECK_EQ(s.spotter, std::string("K1TTT"));
+  CHECK_EQ(s.comment, std::string(""));
+  CHECK_EQ(s.timeUtc, std::string("00:01"));
+  CHECK(looksLikeRtty(s));   // 7045 is in the digital segment and no other mode is named
+
+  // Other modes are filtered out even inside the digital segment.
+  CHECK(parseSpotLine("DX de N0CALL:   14074.0  VK3ABC       FT8 -12 dB                 1500Z", s));
+  CHECK(!looksLikeRtty(s));
+  CHECK(parseSpotLine("DX de N0CALL:   14205.0  VK3ABC       cq dx                      1500Z", s));
+  CHECK(!looksLikeRtty(s));   // SSB segment, no RTTY mention
+  CHECK(parseSpotLine("DX de N0CALL:   14205.0  VK3ABC       rtty test                  1500Z", s));
+  CHECK(looksLikeRtty(s));    // explicit RTTY wins
+
+  // Not spots.
+  CHECK(!parseSpotLine("login: ", s));
+  CHECK(!parseSpotLine("WWV de W0MU <18>:   SFI=140, A=5, K=1, No Storms", s));
+  CHECK(!parseSpotLine("DX de W1AW: notanumber DL1ABC 1234Z", s));
+  CHECK(!parseSpotLine("", s));
+  TEST_MAIN_END();
+}

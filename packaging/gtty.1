@@ -1,0 +1,46 @@
+.TH GTTY 1 "November 2026" "gtty 0.1.0" "User Commands"
+.SH NAME
+gtty \- amateur radio RTTY terminal
+.SH SYNOPSIS
+.B gtty
+.SH DESCRIPTION
+.B gtty
+is a GTK4 RTTY terminal for amateur radio. It decodes Baudot RTTY from a sound
+card with several parallel demodulators (matched filters with selectable modes,
+a character correlator and optionally libcodec2) merged by a vote, skims the
+whole passband, transmits by AFSK audio or true FSK keying
+through a serial port, controls the transceiver with Hamlib, keeps an SQLite
+logbook with ADIF export, reports to GridTracker2 over the WSJT-X UDP protocol
+and offers an fldigi-compatible XML-RPC interface for logging programs.
+.PP
+All configuration is done in the Preferences dialog (Ctrl+comma). Settings are
+kept in named configurations (as in WSJT-X), each a complete file under
+.IR ~/.config/gtty/profiles/ ;
+.I ~/.config/gtty/gtty.conf
+records which one is active. The
+.B Configurations
+menu switches between them and clones, renames, resets or deletes the active one.
+.PP
+Station aids: a DX cluster band map with click-to-QSY, callbook lookup
+(QRZ.com XML or HamQTH) with worked-before information from the logbook,
+rig receiver filter width and IF shift controls, a Tune button, a CW
+identifier and a TX monitor for FSK keying. All are set up in Preferences.
+.SH KEYS
+.TP
+.B F1 .. F12
+Run the macro on that button.
+.TP
+.B Ctrl+T / Ctrl+R / Esc
+Transmit, return to receive, abort.
+.TP
+.B Ctrl+L
+Log the QSO.
+.SH SEE ALSO
+.BR gtty-cli (1),
+.BR rigctl (1)
+.PP
+The user manual is at
+.I https://github.com/gjyoung1974/GTTY/wiki
+and in the
+.I docs/
+directory of the source tree; the Help item in the application menu opens it.

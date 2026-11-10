@@ -1,0 +1,35 @@
+.TH GTTY-CLI 1 "November 2026" "gtty 0.1.0" "User Commands"
+.SH NAME
+gtty-cli \- command-line RTTY encoder, decoder and audio tools for gtty
+.SH SYNOPSIS
+.B gtty-cli
+.I command
+.RI [ options ]
+.SH COMMANDS
+.TP
+.BI encode " TEXT out.wav"
+Generate an AFSK RTTY WAV file.
+.TP
+.BI decode " in.wav"
+Decode a recording with both demodulators.
+.TP
+.B listen
+Decode live audio to standard output.
+.TP
+.BI record " out.wav"
+Capture live audio to a WAV file (see
+.BR \-\-seconds ).
+.TP
+.B devices
+List audio devices.
+.TP
+.BR rigs " [" filter ]
+List Hamlib rig models.
+.TP
+.B rig
+Read frequency and mode from a rig
+.RB ( \-\-model ", " \-\-device ", " \-\-serial\-baud ", " \-\-debug ).
+.SH OPTIONS
+.BR \-\-baud ", " \-\-shift ", " \-\-mark ", " \-\-reverse ", " \-\-rate ", " \-\-no\-afc ", " \-\-no\-atc ", " \-\-ustty ", " \-\-in ", " \-\-out ", " \-\-seconds .
+.SH SEE ALSO
+.BR gtty (1)

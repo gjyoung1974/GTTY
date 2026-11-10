@@ -1,0 +1,174 @@
+name: build
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Build and test (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config \
+            libgtk-4-dev libadwaita-1-dev libhamlib-dev portaudio19-dev libfftw3-dev \
+            libsamplerate0-dev libsndfile1-dev libsqlite3-dev libcurl4-openssl-dev libcodec2-dev
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  test-macos:
+    name: Build and test (macOS ${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: arm64, runner: macos-15 }
+          - { arch: x86_64, runner: macos-13 }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          brew update
+          # sqlite3 and libcurl come from the macOS SDK.
+          brew install ninja pkg-config gtk4 libadwaita hamlib portaudio \
+            fftw libsamplerate libsndfile codec2
+      - name: Toolchain diagnostics
+        run: |
+          pkg-config --modversion gtk4 libadwaita-1 hamlib portaudio-2.0 fftw3f samplerate sndfile sqlite3
+          cmake --version | head -1
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Smoke test the CLI
+        run: |
+          ./build/src/cli/gtty-cli encode "CQ CQ DE N0CALL K" /tmp/cq.wav
+          ./build/src/cli/gtty-cli decode /tmp/cq.wav | tee /tmp/decoded.txt
+          grep -q "CQ CQ DE N0CALL K" /tmp/decoded.txt
+          ./build/src/cli/gtty-cli rigs "ft-710" | head -2
+
+  deb:
+    name: Package (${{ matrix.distro.tag }} ${{ matrix.arch.name }})
+    runs-on: ${{ matrix.arch.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        distro:
+          - { image: "debian:trixie", tag: debian13 }
+          - { image: "ubuntu:24.04", tag: ubuntu24.04 }
+          - { image: "ubuntu:25.04", tag: ubuntu25.04 }
+          - { image: "ubuntu:25.10", tag: ubuntu25.10 }
+        arch:
+          - { name: amd64, runner: ubuntu-24.04 }
+          - { name: arm64, runner: ubuntu-24.04-arm }
+    container: ${{ matrix.distro.image }}
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config file \
+            dpkg-dev libgtk-4-dev libadwaita-1-dev libhamlib-dev portaudio19-dev libfftw3-dev \
+            libsamplerate0-dev libsndfile1-dev libsqlite3-dev libcurl4-openssl-dev libcodec2-dev
+      - name: Configure and build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGTTY_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build
+      - name: Package
+        run: |
+          cd build && cpack -G DEB
+          # one asset name per distro: gtty_<version>_<distro>_<arch>.deb
+          for f in gtty_*.deb; do mv "$f" "${f%_*}_${{ matrix.distro.tag }}_${f##*_}"; done
+          ls -l *.deb
+      - name: Lint package
+        run: |
+          apt-get install -y --no-install-recommends lintian || true
+          lintian --no-tag-display-limit build/*.deb || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gtty-deb-${{ matrix.distro.tag }}-${{ matrix.arch.name }}
+          path: build/*.deb
+
+  appimage:
+    name: AppImage (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, runner: ubuntu-24.04 }
+          - { arch: aarch64, runner: ubuntu-24.04-arm }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config \
+            libgtk-4-dev libadwaita-1-dev portaudio19-dev libfftw3-dev libsamplerate0-dev \
+            libsndfile1-dev libsqlite3-dev libcurl4-openssl-dev libcodec2-dev libusb-1.0-0-dev curl file libgdk-pixbuf2.0-dev \
+            libglib2.0-dev-bin librsvg2-common adwaita-icon-theme
+      - name: Install optional runtime extras for bundling
+        run: |
+          for p in fuse libfuse2t64 libfuse2 adwaita-icon-theme librsvg2-common gstreamer1.0-gtk4 \
+                   gstreamer1.0-plugins-base gstreamer1.0-plugins-good libgstreamer-gl1.0-0; do
+            sudo apt-get install -y --no-install-recommends "$p" || echo "skipping $p"
+          done
+      - name: Build Hamlib 4.6.2 (newer than the distro package; adds recent rigs)
+        run: |
+          curl -fsSL -o hamlib.tar.gz https://github.com/Hamlib/Hamlib/releases/download/4.6.2/hamlib-4.6.2.tar.gz
+          mkdir hamlib && tar -xzf hamlib.tar.gz -C hamlib --strip-components=1
+          cd hamlib && ./configure --prefix=/usr --without-cxx-binding --disable-static && make -j"$(nproc)" && sudo make install
+          sudo ldconfig
+      - name: Toolchain diagnostics
+        run: |
+          pkg-config --modversion gtk4 libadwaita-1 hamlib portaudio-2.0 fftw3f samplerate sndfile sqlite3
+          cmake --version | head -1
+      - name: Configure and build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGTTY_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build
+      - name: Build AppImage
+        run: ./packaging/build-appimage.sh
+      - name: Smoke test the AppImage (CLI inside the bundle)
+        run: |
+          chmod +x gtty-*.AppImage
+          APPIMAGE_EXTRACT_AND_RUN=1 ./gtty-*.AppImage --appimage-extract >/dev/null
+          ./squashfs-root/usr/bin/gtty-cli rigs "ft-710" | head -2
+          ls squashfs-root/usr/lib | head -40
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gtty-appimage-${{ matrix.arch }}
+          path: gtty-*.AppImage
+
+  release:
+    name: Publish release assets
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, deb, appimage]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/gtty-deb-*/*.deb
+            dist/gtty-appimage-*/*.AppImage
+          generate_release_notes: true
