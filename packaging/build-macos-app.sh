@@ -60,7 +60,9 @@ mkdir -p "$LOADERS"
 for d in "$BREW/lib/gdk-pixbuf-2.0/2.10.0/loaders" "$(pkg-config --variable=gdk_pixbuf_moduledir gdk-pixbuf-2.0 2>/dev/null || true)"; do
   [ -d "$d" ] || continue
   for f in "$d"/*.so "$d"/*.dylib; do
-    [ -e "$f" ] && cp -L "$f" "$LOADERS/"
+    # -f: both directories usually resolve to the same loaders, and Homebrew
+    # installs them read-only, so the second copy must replace the first.
+    [ -e "$f" ] && cp -Lf "$f" "$LOADERS/"
   done
 done
 chmod -R u+w "$C"
