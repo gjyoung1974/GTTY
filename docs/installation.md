@@ -5,7 +5,7 @@ nav_order: 2
 
 # Installation
 
-gtty runs on Linux with a GTK4 desktop and on macOS (Apple silicon and Intel). On Linux, packages are built for Debian 13 (trixie), Ubuntu 24.04 LTS, 25.04 and 25.10 on amd64 and arm64, and an AppImage covers other distributions. On macOS there are no prebuilt packages yet: [build from source](#building-from-source-on-macos) with Homebrew.
+gtty runs on Linux with a GTK4 desktop and on macOS (Apple silicon and Intel). On Linux, packages are built for Debian 13 (trixie), Ubuntu 24.04 LTS, 25.04 and 25.10 on amd64 and arm64, and an AppImage covers other distributions. On macOS a `.dmg` is built for Apple silicon; on Intel Macs [build from source](#building-from-source-on-macos) with Homebrew.
 
 ## Debian and Ubuntu packages
 
@@ -32,6 +32,18 @@ On a PipeWire desktop the `pipewire-alsa` package must be installed, otherwise t
    ```
 
 The AppImage bundles GTK4, libadwaita and Hamlib 4.6.2, so it works on distributions with older libraries and knows about recently added rigs.
+
+## macOS disk image
+
+1. Download `gtty-<version>-macos-arm64.dmg` from the releases page (Apple silicon only).
+2. Open it and drag **gtty** to **Applications**.
+3. The app is ad-hoc signed but not notarized, so macOS blocks the first launch. Control-click the app and choose **Open**, or allow it under System Settings → Privacy & Security → **Open Anyway**, or clear the quarantine flag:
+
+   ```
+   xattr -dr com.apple.quarantine /Applications/gtty.app
+   ```
+
+The app bundles GTK4, libadwaita, Hamlib and the other libraries, so Homebrew is not needed. It requires the macOS release it was built on (currently macOS 15) or later. `gtty-cli` is inside the bundle at `/Applications/gtty.app/Contents/MacOS/gtty-cli`.
 
 ## Serial port permissions
 
@@ -79,7 +91,12 @@ ctest --test-dir build
 
 `sqlite3` and `libcurl` come from the macOS SDK, so they need no Homebrew package. Audio uses PortAudio's CoreAudio backend and the GUI uses GTK4's native macOS backend; X11 and XQuartz are not involved.
 
-There is no `.app` bundle yet, so run gtty from the build tree or from the prefix you installed it into.
+Run gtty from the build tree or from the prefix you installed it into. To build `gtty.app` and a `.dmg` from the build tree:
+
+```
+brew install dylibbundler librsvg adwaita-icon-theme
+packaging/build-macos-app.sh
+```
 
 ### Optional dependencies
 
@@ -114,7 +131,7 @@ To build a `.deb` locally run `cpack -G DEB` inside the build directory (Linux o
 ## macOS notes
 
 - **Serial ports** are named `/dev/cu.usbserial-XXXXXXXX` (FTDI), `/dev/cu.SLAB_USBtoUART` (Silicon Labs) or `/dev/cu.usbmodemXXXX` (CDC), not `/dev/ttyUSB0`. Run `ls /dev/cu.*` to list them, and always use the `cu.` name rather than the `tty.` one, which blocks waiting for carrier detect. Wherever these pages say `/dev/ttyUSB0`, read your adapter's `cu.` name.
-- **Microphone permission**: macOS gates audio input. The first time gtty opens the sound card, macOS asks the application that launched it — your terminal, since gtty is not a bundled `.app` — for permission. If the prompt was dismissed, re-enable it under System Settings → Privacy & Security → Microphone. Without it the device opens but delivers silence and the waterfall stays empty.
+- **Microphone permission**: macOS gates audio input. The first time gtty opens the sound card, macOS asks for permission: for gtty itself when it is installed from the `.dmg`, or for the application that launched it (your terminal) when it is run from a build tree. If the prompt was dismissed, re-enable it under System Settings → Privacy & Security → Microphone. Without it the device opens but delivers silence and the waterfall stays empty.
 - **True FSK** over a UART needs a driver that accepts the 45 baud RTTY rate. FTDI adapters do; some CP210x and CDC-ACM drivers do not, and gtty reports the error when the port is opened. FSK via DTR/RTS and AFSK work either way. See [Transmitting](transmitting.md).
 
 The configuration and data paths below are the same as on Linux.

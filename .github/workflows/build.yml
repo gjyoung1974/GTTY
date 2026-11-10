@@ -158,10 +158,48 @@ jobs:
           name: gtty-appimage-${{ matrix.arch }}
           path: gtty-*.AppImage
 
+  macos-app:
+    name: macOS app (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: arm64, runner: macos-15 }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          brew update
+          # sqlite3 and libcurl come from the macOS SDK.
+          brew install ninja pkg-config gtk4 libadwaita hamlib portaudio \
+            fftw libsamplerate libsndfile codec2 \
+            dylibbundler librsvg adwaita-icon-theme
+      - name: Configure and build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGTTY_BUILD_TESTS=OFF
+          cmake --build build
+      - name: Build gtty.app and the disk image
+        run: ./packaging/build-macos-app.sh
+      - name: Smoke test the bundle (CLI inside the mounted disk image)
+        run: |
+          hdiutil attach -nobrowse -readonly -mountpoint /tmp/gtty-dmg gtty-*.dmg
+          ls /tmp/gtty-dmg/gtty.app/Contents/Frameworks | head -60
+          cli=/tmp/gtty-dmg/gtty.app/Contents/MacOS/gtty-cli
+          "$cli" encode "CQ CQ DE N0CALL K" /tmp/cq.wav
+          "$cli" decode /tmp/cq.wav | tee /tmp/decoded.txt
+          grep -q "CQ CQ DE N0CALL K" /tmp/decoded.txt
+          "$cli" rigs "ft-710" | head -2
+          hdiutil detach /tmp/gtty-dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gtty-macos-${{ matrix.arch }}
+          path: gtty-*.dmg
+
   release:
     name: Publish release assets
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [test, deb, appimage]
+    needs: [test, deb, appimage, macos-app]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -174,4 +212,5 @@ jobs:
           files: |
             dist/gtty-deb-*/*.deb
             dist/gtty-appimage-*/*.AppImage
+            dist/gtty-macos-*/*.dmg
           generate_release_notes: true

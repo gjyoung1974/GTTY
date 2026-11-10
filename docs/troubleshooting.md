@@ -11,7 +11,7 @@ Nothing is decoded until the input works. The banner's **Preferences** button op
 
 - Choose a specific device rather than *(default)*. `gtty-cli devices` lists what PortAudio sees.
 - On a PipeWire desktop install `pipewire-alsa`; without it the `default` and `pipewire` ALSA devices cannot be opened. The `.deb` recommends it, so `apt install ./gtty_*.deb` pulls it in and `dpkg -i` does not.
-- On macOS, if the device opens but the waterfall stays blank and the level meter reads zero, the terminal running gtty has not been granted microphone access. Allow it under System Settings → Privacy & Security → Microphone and restart gtty.
+- On macOS, if the device opens but the waterfall stays blank and the level meter reads zero, gtty (or, when run from a build tree, the terminal running it) has not been granted microphone access. Allow it under System Settings → Privacy & Security → Microphone and restart gtty.
 - Another program may hold the device exclusively. Close it or use a PipeWire or PulseAudio device instead of the raw hardware device.
 - A device that was configured but is no longer present falls back to the system default with a toast.
 

@@ -104,9 +104,10 @@ brew install cmake ninja pkg-config gtk4 libadwaita hamlib portaudio \
 
 `sqlite3` and `libcurl` come from the macOS SDK, so no Homebrew package is
 needed for them. Audio goes through PortAudio's CoreAudio backend and the GUI
-through GTK4's macOS backend; there is no XQuartz or X11 involved. There is no
-`.app` bundle yet, so run gtty from the build tree or from the prefix you
-install it into. See [macOS notes](#macos-notes) for serial ports, microphone
+through GTK4's macOS backend; there is no XQuartz or X11 involved. Run gtty
+from the build tree or from the prefix you install it into, or build a
+`gtty.app` and `.dmg` with `packaging/build-macos-app.sh` (needs
+`brew install dylibbundler librsvg adwaita-icon-theme`). See [macOS notes](#macos-notes) for serial ports, microphone
 permission and what differs in FSK keying.
 
 ### Build
@@ -193,7 +194,12 @@ gtty a different port.
 
 ## Installing from packages
 
-There are no prebuilt macOS packages; build from source as above.
+- **macOS (Apple silicon)**: download `gtty-<version>-macos-arm64.dmg` from the
+  releases page, open it and drag **gtty** to Applications. The app is not
+  notarized, so the first launch needs Control-click ==> Open (or
+  `xattr -dr com.apple.quarantine /Applications/gtty.app`). It needs the macOS
+  release it was built on (currently macOS 15) or later. Intel Macs: build from
+  source as above.
 
 - **Debian / Ubuntu**: download the `.deb` for your release from the releases
   page and `sudo apt install ./gtty_*.deb`. Packages are built for Debian 13
@@ -256,8 +262,9 @@ character decoder is the planned next step for those.
   `tty.` one: `tty.` blocks on carrier detect. Everywhere this README says
   `/dev/ttyUSB0`, read the `cu.` name of your adapter instead.
 - **Microphone permission**: macOS gates audio input. The first time gtty opens
-  the sound card, macOS asks the application that launched it : your terminal,
-  since gtty is not a bundled `.app` : for permission. If you dismissed the
+  the sound card, macOS asks for permission: for `gtty.app` itself when
+  installed from the `.dmg`, or for the application that launched it (your
+  terminal) when run from a build tree. If you dismissed the
   prompt, re-enable it under System Settings ==> Privacy & Security ==> Microphone;
   without it PortAudio opens the device but delivers silence, and gtty's
   waterfall stays empty.
