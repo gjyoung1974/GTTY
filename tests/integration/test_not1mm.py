@@ -139,7 +139,9 @@ modem_only=true
 class Station:
     """A private gtty and (when available) a dummy radio behind rigctld."""
 
-    def __init__(self, gtty_bin, rigctld_bin):
+    def __init__(self, gtty_bin, rigctld_bin, extra=""):
+        """extra: more profile text. A key given again in a later group of the
+        same name replaces the one in PROFILE."""
         self.tmp = Path(tempfile.mkdtemp(prefix="gtty-not1mm-"))
         self.rpc_port = free_port()
         self.rig_port = free_port() if rigctld_bin else 0
@@ -160,7 +162,7 @@ class Station:
         (conf / "gtty.conf").write_text("[profiles]\ncurrent=Test\n")
         (conf / "profiles" / "Test.conf").write_text(PROFILE.format(
             rig_enabled="true" if rigctld_bin else "false", rig_port=self.rig_port,
-            session_dir=self.session_dir, rpc_port=self.rpc_port))
+            session_dir=self.session_dir, rpc_port=self.rpc_port) + extra)
 
         env = dict(os.environ, XDG_CONFIG_HOME=str(self.tmp / "config"),
                    XDG_DATA_HOME=str(self.tmp / "data"))

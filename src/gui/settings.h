@@ -116,6 +116,14 @@ struct Settings {
   bool gtSendDecodes = true;    // report decoded callsigns as Decode messages
   bool gtSendLogged = true;     // report logged QSOs
   bool gtAcceptReply = true;    // GridTracker click -> fill the Call field
+  // Logged QSOs pushed to a logbook the way fldigi pushes them to fllog (fllog, QLog)
+  bool fllogEnabled = false;
+  std::string fllogHost = "127.0.0.1";
+  int fllogPort = 8421;
+  // Telnet spot feed of the skimmer (loggers connect to it as to a DX cluster)
+  bool spotServerEnabled = false;
+  std::string spotServerBind = "127.0.0.1";
+  int spotServerPort = 7300;
   // DX cluster / band map
   bool clusterEnabled = false;
   std::string clusterHost;

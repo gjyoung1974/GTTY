@@ -64,7 +64,7 @@ nav_order: 16
 | **Cluster** | Host, port, login, commands; RTTY only, this band, maximum age |
 | **Callbook** | Service, username, password, auto-fill |
 | **Bands** | Dial frequency per band button |
-| **Integration** | WSJT-X UDP (GridTracker) host, port and what to exchange; XML-RPC bind address and port |
+| **Integration** | WSJT-X UDP (GridTracker, QLog, KLog, Wavelog) host, port and what to exchange; XML-RPC bind address and port; logbook server (fllog, QLog) host and port; skimmer spot feed bind address and port |
 
 ## Defaults
 
@@ -92,6 +92,8 @@ nav_order: 16
 | Cluster | Port 7300, RTTY only, 30 min |
 | GridTracker | 127.0.0.1:2237, off |
 | XML-RPC | 127.0.0.1:7362, off |
+| Logbook server | 127.0.0.1:8421, off |
+| Skimmer spot feed | 127.0.0.1:7300, off |
 
 ## Files
 

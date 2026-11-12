@@ -1,6 +1,6 @@
 // Minimal XML-RPC over HTTP server, compatible with the clients that talk to
-// fldigi (xmlrpc-c based loggers such as CQRLOG and TLF). Single-threaded
-// accept loop; the handler is invoked on the server thread.
+// fldigi (CQRLOG, TLF, Not1MM, ...). One server thread serves all connections
+// side by side; the handler is invoked on that thread, one request at a time.
 #pragma once
 #include <atomic>
 #include <cstdint>
@@ -39,6 +39,7 @@ struct Value {
 };
 
 bool parseRequest(const std::string& xml, std::string& method, std::vector<Value>& params, std::string& err);
+std::string serializeRequest(const std::string& method, const std::vector<Value>& params);
 std::string serializeValue(const Value& v);
 std::string serializeResponse(const Value& v);
 std::string serializeFault(int code, const std::string& message);
@@ -61,7 +62,7 @@ class Server {
 
  private:
   void loop();
-  void serve(int client);
+  bool serveOne(std::string& in, std::string& out, bool& close);
   int fd_ = -1;
   std::thread thread_;
   std::atomic<bool> run_{false};

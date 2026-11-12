@@ -107,6 +107,62 @@ int main() {
     ::close(fd);
   }
 
+  // ---------------- two programs at once. One keeps its connection open between
+  // calls (xmlrpc-c, Python); the other opens one per call, speaks HTTP/1.0 and
+  // reads until the server closes (CQRLOG). The second must not wait for the first.
+  {
+    auto request = [](const char* version, const char* method) {
+      std::string body = std::string("<?xml version=\"1.0\"?><methodCall><methodName>") + method +
+                         "</methodName><params></params></methodCall>";
+      return std::string("POST /RPC2 ") + version + "\r\nContent-Type: text/xml\r\nContent-Length: " +
+             std::to_string(body.size()) + "\r\n\r\n" + body;
+    };
+    // Reads until `until` shows up, the peer closes (sets *closed) or `ms` pass.
+    auto readReply = [](int s, const char* until, int ms, bool* closed) {
+      std::string resp;
+      char buf[2048];
+      auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(ms);
+      if (closed) *closed = false;
+      while (std::chrono::steady_clock::now() < end) {
+        pollfd p{s, POLLIN, 0};
+        if (::poll(&p, 1, 20) <= 0) continue;
+        ssize_t n = ::recv(s, buf, sizeof buf, 0);
+        if (n <= 0) { if (closed) *closed = true; break; }
+        resp.append(buf, static_cast<size_t>(n));
+        if (until && resp.find(until) != std::string::npos) break;
+      }
+      return resp;
+    };
+    int keep = connectLoopback(port);
+    CHECK(keep >= 0);
+    std::string r1 = request("HTTP/1.1", "main.get_frequency");
+    CHECK(::send(keep, r1.data(), r1.size(), net::sendFlags()) == static_cast<ssize_t>(r1.size()));
+    CHECK(readReply(keep, "</methodResponse>", 2000, nullptr).find("14080.5") != std::string::npos);
+    // `keep` stays open and idle.
+
+    auto t0 = std::chrono::steady_clock::now();
+    int once = connectLoopback(port);
+    CHECK(once >= 0);
+    std::string r2 = request("HTTP/1.0", "main.get_frequency");
+    CHECK(::send(once, r2.data(), r2.size(), net::sendFlags()) == static_cast<ssize_t>(r2.size()));
+    bool closed = false;
+    std::string resp = readReply(once, nullptr, 3000, &closed);   // until the server closes
+    auto took = std::chrono::steady_clock::now() - t0;
+    CHECK(resp.find("14080.5") != std::string::npos);
+    CHECK(closed);                                   // HTTP/1.0: closed once answered
+    CHECK(took < std::chrono::milliseconds(1000));   // not held up by the idle connection
+    ::close(once);
+
+    // The kept connection still works, also for two requests sent back to back.
+    std::string two = r1 + r1;
+    CHECK(::send(keep, two.data(), two.size(), net::sendFlags()) == static_cast<ssize_t>(two.size()));
+    std::string both = readReply(keep, nullptr, 500, nullptr);
+    size_t first = both.find("</methodResponse>");
+    CHECK(first != std::string::npos && both.find("</methodResponse>", first + 1) != std::string::npos);
+    ::close(keep);
+    CHECK_EQ(server.requestCount(), static_cast<uint64_t>(5));
+  }
+
   // -------------------------------- writing to a peer that went away must not
   // raise SIGPIPE: MSG_NOSIGNAL on Linux, SO_NOSIGPIPE on macOS/BSD. Without
   // the shim this kills the process and the test fails by not finishing.

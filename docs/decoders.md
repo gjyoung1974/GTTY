@@ -69,6 +69,8 @@ Stations appear in the **Skimmer** page of the sidebar, sorted by frequency, wit
 
 **Click a row** to move the decoders to that signal and put the callsign in the Call field. Entries disappear 90 seconds after the station was last heard.
 
+A contest logger can show the same stations in its own band map: see [Skimmer spot feed](integrations.md#skimmer-spot-feed).
+
 {: .tip }
 With a wide receiver filter (2.4 kHz or more) and the Skimmer on, you can see the whole RTTY segment at once and work stations by clicking them, which is how a contest run on search-and-pounce goes fastest.
 

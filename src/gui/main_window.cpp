@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <functional>
 
+#include "core/log/adif.h"
 #include "core/log/grid.h"
 #include "prefs_dialog.h"
 
@@ -63,6 +64,7 @@ MainWindow::MainWindow(AdwApplication* app)
   openRig();
   openGridTracker();
   openRpc();
+  openSpotServer();
   openSessionLog();
   openCluster();
   setBandMapVisible(settings_.bandMapVisible);
@@ -76,6 +78,8 @@ MainWindow::MainWindow(AdwApplication* app)
 
 MainWindow::~MainWindow() {
   rpc_.stop();
+  spotServer_.stop();
+  fllog_.stop();
   cluster_.stop();
   if (callLookupId_) g_source_remove(callLookupId_);
   if (tickId_) g_source_remove(tickId_);
@@ -1322,6 +1326,7 @@ void MainWindow::logQso() {
   std::string err;
   if (!log_.add(q, err)) { toast("Log failed: " + err); return; }
   gtReportQso(q);
+  fllogReportQso(q);
   toast("Logged " + q.call);
   bandMapDirty_ = true;   // dupe coloring
   gtk_spin_button_spin(GTK_SPIN_BUTTON(serialSpin_), GTK_SPIN_STEP_FORWARD, 1);
@@ -1435,6 +1440,7 @@ void MainWindow::applySettings() {
   openRig();
   openGridTracker();
   openRpc();
+  openSpotServer();
   openSessionLog();
   openCluster();
   setBandMapVisible(settings_.bandMapVisible);
@@ -1738,6 +1744,38 @@ void MainWindow::onSkimmerText(const SkimmerTextEvent& e) {
   if (hit->text.size() > 160) hit->text.erase(0, hit->text.size() - 160);
   for (const auto& [pos, len] : findCallsigns(hit->text)) hit->call = upper(hit->text.substr(pos, len));
   skimDirty_ = true;
+  spotSkimmed(hit->text, hit->markHz);
+}
+
+// ------------------------------------------------- skimmer spot feed (telnet)
+
+void MainWindow::openSpotServer() {
+  spotServer_.stop();
+  sentSpots_.clear();
+  if (!settings_.spotServerEnabled) return;
+  std::string err;
+  if (!spotServer_.start(settings_.spotServerBind, static_cast<uint16_t>(settings_.spotServerPort), settings_.myCall, err))
+    toast("Spot feed: " + err);
+}
+
+// `text` is what one skimmer channel has decoded lately. Spot the station it names, once
+// every few minutes unless it has moved.
+void MainWindow::spotSkimmed(const std::string& text, double markHz) {
+  if (!spotServer_.running() || tx_.transmitting()) return;
+  bool cq = false;
+  // Only the recent text: an earlier station on the same frequency is not spotted again.
+  std::string call = spottableCall(text.size() > 90 ? text.substr(text.size() - 90) : text, settings_.myCall, &cq);
+  if (call.empty()) return;
+  double rf = lsbLike() ? dialFreqHz() - markHz : dialFreqHz() + markHz;   // RTTY is spotted on its mark frequency
+  if (rf <= 0) return;
+  int64_t now = g_get_monotonic_time();
+  auto it = sentSpots_.find(call);
+  if (it != sentSpots_.end() && now - it->second.at < 300 * G_USEC_PER_SEC && std::fabs(it->second.freqHz - rf) < 500) return;
+  if (sentSpots_.size() > 2000) sentSpots_.clear();
+  sentSpots_[call] = {rf, now};
+  char comment[40];
+  snprintf(comment, sizeof comment, "RTTY  %d BPS%s", static_cast<int>(std::lround(settings_.rtty.baud)), cq ? "  CQ" : "");
+  spotServer_.spot(call, rf, comment);
 }
 
 void MainWindow::ageSkim() {
@@ -2188,7 +2226,7 @@ xmlrpc::Value MainWindow::rpcDispatch(const std::string& m, const std::vector<xm
   static const char* kMethods[] = {
       "system.listMethods", "system.methodHelp", "system.methodSignature", "fldigi.name", "fldigi.version",
       "fldigi.version_struct", "fldigi.name_version", "fldigi.list", "fldigi.terminate",
-      "modem.get_name", "modem.get_names", "modem.set_by_name", "modem.get_id", "modem.get_carrier",
+      "modem.get_name", "modem.get_mode", "modem.get_submode", "modem.get_names", "modem.set_by_name", "modem.get_id", "modem.get_carrier",
       "modem.set_carrier", "modem.inc_carrier", "modem.get_afc_search_range", "modem.get_bandwidth",
       "main.get_frequency", "main.set_frequency", "main.inc_frequency", "main.get_trx_status", "main.get_trx_state",
       "main.tx", "main.rx", "main.abort", "main.tune", "main.get_afc", "main.set_afc", "main.toggle_afc",
@@ -2199,7 +2237,7 @@ xmlrpc::Value MainWindow::rpcDispatch(const std::string& m, const std::vector<xm
       "text.get_rx_length", "text.get_rx", "text.clear_rx", "text.add_tx", "text.add_tx_bytes", "text.clear_tx",
       "log.get_call", "log.set_call", "log.get_name", "log.set_name", "log.get_rst_in", "log.set_rst_in",
       "log.get_rst_out", "log.set_rst_out", "log.get_exchange", "log.set_exchange", "log.get_serial_number",
-      "log.set_serial_number", "log.get_serial_number_sent", "log.get_frequency", "log.get_time_on",
+      "log.set_serial_number", "log.get_serial_number_sent", "log.get_frequency", "log.get_date_on", "log.get_date_off", "log.get_time_on",
       "log.get_time_off", "log.get_band", "log.get_locator", "log.set_locator", "log.get_qth", "log.set_qth",
       "log.get_country", "log.get_province", "log.get_state", "log.get_az", "log.get_notes", "log.set_notes",
       "log.clear",
@@ -2231,7 +2269,8 @@ xmlrpc::Value MainWindow::rpcDispatch(const std::string& m, const std::vector<xm
   }
   if (m == "fldigi.terminate") return V::nil();
 
-  if (m == "modem.get_name") return V::string("RTTY");
+  if (m == "modem.get_name" || m == "modem.get_mode") return V::string("RTTY");   // get_mode: the ADIF mode
+  if (m == "modem.get_submode") return V::string("");
   if (m == "modem.get_names") return V::array({V::string("RTTY")});
   if (m == "modem.set_by_name") return V::string("RTTY");
   if (m == "modem.get_id") return V::integer(0);
@@ -2323,6 +2362,10 @@ xmlrpc::Value MainWindow::rpcDispatch(const std::string& m, const std::vector<xm
   if (m == "log.set_serial_number") { gtk_spin_button_set_value(GTK_SPIN_BUTTON(serialSpin_), arg(0).asDouble()); return V::nil(); }
   // The Frequency field of fldigi's log row is in kHz; TLF and CQRLOG rely on it.
   if (m == "log.get_frequency") { char buf[32]; snprintf(buf, sizeof buf, "%.3f", dialFreqHz() / 1000.0); return V::string(buf); }
+  if (m == "log.get_date_on" || m == "log.get_date_off") {   // YYYYMMDD
+    std::string now = Logbook::nowUtc();
+    return V::string(now.substr(0, 4) + now.substr(5, 2) + now.substr(8, 2));
+  }
   if (m == "log.get_time_on" || m == "log.get_time_off") return V::string(Logbook::nowUtc().substr(11, 2) + Logbook::nowUtc().substr(14, 2));
   if (m == "log.get_band") return V::string(bandForFrequency(dialFreqHz()));
   if (m == "log.get_locator") return V::string(ctx_.grid);
@@ -2454,20 +2497,21 @@ void MainWindow::gtReportQso(const Qso& q) {
   w.exchRcvd = q.exchRcvd;
   gt_.send(wsjtx::encodeQsoLogged(gt_.id(), w));
   // Also the ADIF form, which newer GridTracker builds prefer for log forwarding.
-  std::string date = q.timeUtc.substr(0, 4) + q.timeUtc.substr(5, 2) + q.timeUtc.substr(8, 2);
-  std::string time = q.timeUtc.size() >= 19 ? q.timeUtc.substr(11, 2) + q.timeUtc.substr(14, 2) + q.timeUtc.substr(17, 2) : "";
-  auto f = [](const char* n, const std::string& v) {
-    return v.empty() ? std::string() : "<" + std::string(n) + ":" + std::to_string(v.size()) + ">" + v;
-  };
-  char freq[32];
-  snprintf(freq, sizeof freq, "%.6f", q.freqHz / 1e6);
-  std::string adif = "<adif_ver:5>3.1.4<programid:4>gtty<EOH>\n" + f("call", q.call) + f("gridsquare", q.grid) +
-                     f("mode", q.mode) + f("rst_sent", q.rstSent) + f("rst_rcvd", q.rstRcvd) + f("qso_date", date) +
-                     f("time_on", time) + f("qso_date_off", date) + f("time_off", time) + f("band", q.band) +
-                     (q.freqHz > 0 ? f("freq", freq) : "") + f("station_callsign", settings_.myCall) +
-                     f("my_gridsquare", settings_.myGrid) + f("stx_string", q.exchSent) + f("srx_string", q.exchRcvd) +
-                     f("name", q.name) + f("comment", q.comment) + "<EOR>";
+  // Laid out as WSJT-X sends it. The leading newline matters: ADIF text that starts with
+  // '<' has no header, and a reader such as QLog's then takes the header tags for QSO fields.
+  std::string adif = "\n<adif_ver:5>3.1.4\n<programid:4>gtty\n<EOH>\n" +
+                     adifRecord(q, settings_.myCall, settings_.myGrid, AdifStyle::Wsjtx);
   gt_.send(wsjtx::encodeLoggedAdif(gt_.id(), adif));
+}
+
+// The same QSO to a logbook server, as fldigi sends it to fllog.
+void MainWindow::fllogReportQso(const Qso& q) {
+  if (!settings_.fllogEnabled) return;
+  fllog_.onResult = [this](bool ok, const std::string& call, const std::string& err) {
+    if (!ok) events_.push(MessageEvent{"Logbook server: " + call + " not sent (" + err + ")", true});
+  };
+  fllog_.setTarget(settings_.fllogHost, static_cast<uint16_t>(settings_.fllogPort));
+  fllog_.add(q.call, adifRecord(q, settings_.myCall, settings_.myGrid, AdifStyle::Fldigi));
 }
 
 void MainWindow::gtHandle(const wsjtx::Incoming& in) {

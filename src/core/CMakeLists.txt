@@ -15,12 +15,15 @@ add_library(gttycore STATIC
   rig/rig_control.cpp
   rig/fsk_keyer.cpp
   log/logbook.cpp
+  log/adif.cpp
   log/callsign.cpp
   log/grid.cpp
   log/callbook.cpp
   net/wsjtx_udp.cpp
   net/xmlrpc_server.cpp
   net/cluster_client.cpp
+  net/fllog_client.cpp
+  net/spot_server.cpp
   macros.cpp
   transmitter.cpp
   receiver.cpp

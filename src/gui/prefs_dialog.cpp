@@ -33,6 +33,8 @@ struct Prefs {
   GtkWidget *autoRx, *autoRxDelay, *clearTxOnRx, *wordMode, *autoCqInterval, *autoCqMacro;
   GtkWidget *rxTimestamps, *rxLogToFile, *rxLogDir;
   GtkWidget *rpcEnabled, *rpcBind, *rpcPort;
+  GtkWidget *fllogEnabled, *fllogHost, *fllogPort;
+  GtkWidget *spotEnabled, *spotBind, *spotPort;
   GtkWidget *myCall, *myName, *myQth, *myGrid;
   GtkWidget *scpPath, *logPath, *wfLo, *wfHi, *wfDir, *fontSize, *theme, *modemOnly;
   GtkWidget *gtEnabled, *gtHost, *gtPort, *gtDecodes, *gtLogged, *gtReply;
@@ -177,6 +179,12 @@ void onClosed(AdwDialog*, gpointer p) {
   s.rpcEnabled = active(pr->rpcEnabled);
   s.rpcBind = text(pr->rpcBind);
   s.rpcPort = static_cast<int>(value(pr->rpcPort));
+  s.fllogEnabled = active(pr->fllogEnabled);
+  s.fllogHost = text(pr->fllogHost);
+  s.fllogPort = static_cast<int>(value(pr->fllogPort));
+  s.spotServerEnabled = active(pr->spotEnabled);
+  s.spotServerBind = text(pr->spotBind);
+  s.spotServerPort = static_cast<int>(value(pr->spotPort));
 
   s.myCall = text(pr->myCall);
   s.myName = text(pr->myName);
@@ -458,6 +466,16 @@ void showPrefsDialog(GtkWidget* parent, Settings& s, std::function<void()> onApp
     pr->rpcEnabled = toggle(g3, "Enable XML-RPC server", s.rpcEnabled, "Loggers that drive fldigi can drive gtty: text, TX/RX, frequency, log fields");
     pr->rpcBind = entry(g3, "Bind address", s.rpcBind);
     pr->rpcPort = spin(g3, "Port (fldigi default 7362)", 1, 65535, 1, s.rpcPort);
+    GtkWidget* g4 = group(pg, "Logbook server (fllog, QLog)");
+    pr->fllogEnabled = toggle(g4, "Send logged QSOs", s.fllogEnabled,
+                              "Each QSO logged in gtty is handed over as fldigi hands it to fllog (XML-RPC log.add_record)");
+    pr->fllogHost = entry(g4, "Host", s.fllogHost);
+    pr->fllogPort = spin(g4, "Port (fllog and QLog: 8421)", 1, 65535, 1, s.fllogPort);
+    GtkWidget* g5 = group(pg, "Skimmer spot feed (telnet)");
+    pr->spotEnabled = toggle(g5, "Serve skimmer spots", s.spotServerEnabled,
+                             "Loggers connect as to a DX cluster and get a spot for every station the Skimmer identifies. Needs the Skimmer on");
+    pr->spotBind = entry(g5, "Bind address", s.spotServerBind);
+    pr->spotPort = spin(g5, "Port", 1, 65535, 1, s.spotServerPort);
   }
 
   g_signal_connect(dlg, "closed", G_CALLBACK(onClosed), pr);

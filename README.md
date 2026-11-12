@@ -55,8 +55,12 @@ Features:
   everything received and sent, and up to four manual **notch filters** (middle-click
   the waterfall to place or remove one).
 - **Logger integration** through an **fldigi-compatible XML-RPC server** (port 7362):
-  CQRLOG, TLF and anything else that drives fldigi can read decoded text, send text,
-  key TX/RX, set the frequency and fill the log fields.
+  TLF, Not1MM, CQRLOG and anything else that drives fldigi can read decoded text, send
+  text, key TX/RX, set the frequency and fill the log fields.
+- **Logged QSOs forwarded** to QLog, KLog and Wavelog over the WSJT-X UDP protocol,
+  and to fllog or QLog the way fldigi does it (XML-RPC `log.add_record`).
+- **Skimmer spot feed**: gtty serves the stations its Skimmer identifies as a telnet
+  DX cluster, so a contest logger's band map fills from your own receiver's passband.
 - **Light / dark appearance** (follow system, light, or dark) under Preferences ==> Station.
 - **DX cluster band map**: connect to a DXSpider / AR-Cluster / CC Cluster node
   (Preferences ==> Cluster), RTTY spots fill a band map beside the main window,

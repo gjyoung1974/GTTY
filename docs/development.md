@@ -9,10 +9,10 @@ nav_order: 17
 
 | Directory | Contents |
 |---|---|
-| `src/core` | GUI-independent library: Baudot codec, modulator, demodulators, decoder bank and voter, skimmer, PortAudio engine, Hamlib wrapper, FSK keyer, logbook, callsign and SCP tools, macros, cluster and callbook clients, WSJT-X UDP and XML-RPC, TX/RX orchestration |
+| `src/core` | GUI-independent library: Baudot codec, modulator, demodulators, decoder bank and voter, skimmer, PortAudio engine, Hamlib wrapper, FSK keyer, logbook, callsign and SCP tools, macros, cluster and callbook clients, WSJT-X UDP and XML-RPC, the logbook server client and the skimmer spot feed, TX/RX orchestration |
 | `src/cli` | `gtty-cli` |
 | `src/gui` | The GTK4/libadwaita application: main window, Preferences dialog, waterfall, XY scope, settings and configurations |
-| `tests` | ctest unit tests: Baudot, modem loopback with noise, offset and resampling, voter, correlator, skimmer, macros, callsign recognition, profiles, cluster parsing, XML-RPC, WSJT-X encoding, CW, callbook |
+| `tests` | ctest unit tests: Baudot, modem loopback with noise, offset and resampling, voter, correlator, skimmer, macros, callsign recognition, profiles, cluster parsing, XML-RPC, WSJT-X encoding, the spot feed, the logbook server client, CW, callbook |
 | `tools` | `bench_rtty.py`, the decoder benchmark |
 | `packaging` | Man pages, Debian changelog and copyright, AppImage build script |
 | `data` | Desktop entry, AppStream metainfo, icon |
@@ -31,6 +31,12 @@ ctest --test-dir build --output-on-failure
 `tests/integration/test_not1mm.py` checks gtty against [Not1MM](https://github.com/mbridak/not1mm): it starts a private gtty and a Hamlib dummy radio behind `rigctld`, then drives them with Not1MM's own fldigi and rigctld client classes (F-key messages, the `^r` return to receive, PTT, QSY in both directions). It needs a Not1MM checkout (`NOT1MM_SRC`, or `../not1mm`), a display, and `rigctld` for the radio tests (`RIGCTLD`, or `libhamlib-utils`). Run it directly, or with `GTTY_INTEGRATION=1 ctest --test-dir build -R not1mm`; otherwise ctest reports it as skipped.
 
 `tests/integration/test_tlf.py` does the same for [TLF](https://github.com/Tlf/tlf). TLF is a C program, so the test repeats the sequence of fldigi calls from TLF's `src/fldigixmlrpc.c` instead of loading its code: sending a message, Escape, a new message replacing one that is going out, the log frequency in kHz, QSY, auto-QSY and reading the receive text. Run it with `GTTY_INTEGRATION=1 ctest --test-dir build -R tlf`.
+
+Three more tests cover programs that cannot be loaded or installed for a test run, each by repeating the relevant part of the program's source (named in the test's header) rather than a reading of the protocol:
+
+- `test_cqrlog.py`: gtty polled as [CQRLOG](https://github.com/ok2cqr/cqrlog)'s fldigi remote polls it: one HTTP/1.0 connection per call, the answer cut out of the reply between `<value>` and `</value>`, the date, time and frequency formats it expects, and a second logger holding a connection open at the same time. `-R cqrlog`.
+- `test_log_forwarding.py`: a QSO is logged in gtty and the *QSO Logged* and *Logged ADIF* datagrams are read with the readers of [QLog](https://github.com/foldynl/QLog), [KLog](https://github.com/ea4k/klog) and [WaveLogGate](https://github.com/wavelog/WaveLogGate); the `log.add_record` call is received by a server that reads it as QLog's fldigi interface does. `-R log_forwarding`.
+- `test_spot_feed.py`: a station calls CQ in RTTY on a virtual sound device with the Skimmer and the spot feed on, and cluster clients that parse as TLF (fixed columns), Not1MM and QLog do must each get the spot, once. Needs `pactl` and `paplay`. `-R spot_feed`.
 
 `tests/integration/test_not1mm_gui.py` goes one step further and plays an operator: it starts Not1MM's real main window (off-screen, with an empty configuration and log of its own) beside gtty in the modem-only view and types into it. It sets the frequency and mode, calls CQ with F1, plays an answering station into gtty as RTTY audio, sends the call and exchange with F2 and F3, and logs the QSO with Enter, checking gtty and Not1MM's log at each step. It additionally needs a Python that can import Not1MM and PyQt6 (`NOT1MM_PYTHON`, or the uv or pipx tool environment) and, for the received audio, `pactl` and `paplay`.
 

@@ -351,6 +351,12 @@ bool Settings::loadFrom(const std::string& path) {
   gtSendDecodes = boolean(kf, "gridtracker", "send_decodes", gtSendDecodes);
   gtSendLogged = boolean(kf, "gridtracker", "send_logged", gtSendLogged);
   gtAcceptReply = boolean(kf, "gridtracker", "accept_reply", gtAcceptReply);
+  fllogEnabled = boolean(kf, "fllog", "enabled", fllogEnabled);
+  fllogHost = str(kf, "fllog", "host", fllogHost);
+  fllogPort = integer(kf, "fllog", "port", fllogPort);
+  spotServerEnabled = boolean(kf, "spots", "enabled", spotServerEnabled);
+  spotServerBind = str(kf, "spots", "bind", spotServerBind);
+  spotServerPort = integer(kf, "spots", "port", spotServerPort);
   waterfallLoHz = dbl(kf, "display", "wf_lo", waterfallLoHz);
   waterfallHiHz = dbl(kf, "display", "wf_hi", waterfallHiHz);
   waterfallDirection = integer(kf, "display", "wf_direction", waterfallDirection);
@@ -471,6 +477,12 @@ bool Settings::saveTo(const std::string& path) const {
   g_key_file_set_boolean(kf, "gridtracker", "send_decodes", gtSendDecodes);
   g_key_file_set_boolean(kf, "gridtracker", "send_logged", gtSendLogged);
   g_key_file_set_boolean(kf, "gridtracker", "accept_reply", gtAcceptReply);
+  g_key_file_set_boolean(kf, "fllog", "enabled", fllogEnabled);
+  g_key_file_set_string(kf, "fllog", "host", fllogHost.c_str());
+  g_key_file_set_integer(kf, "fllog", "port", fllogPort);
+  g_key_file_set_boolean(kf, "spots", "enabled", spotServerEnabled);
+  g_key_file_set_string(kf, "spots", "bind", spotServerBind.c_str());
+  g_key_file_set_integer(kf, "spots", "port", spotServerPort);
   g_key_file_set_double(kf, "display", "wf_lo", waterfallLoHz);
   g_key_file_set_double(kf, "display", "wf_hi", waterfallHiHz);
   g_key_file_set_integer(kf, "display", "wf_direction", waterfallDirection);

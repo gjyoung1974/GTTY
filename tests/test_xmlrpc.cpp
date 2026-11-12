@@ -47,7 +47,18 @@ int main() {
   CHECK_EQ(base64Decode(base64Encode("ab")), std::string("ab"));
   CHECK_EQ(base64Decode(base64Encode("abcd")), std::string("abcd"));
   std::string resp = serializeResponse(Value::string("RT<TY>"));
-  CHECK(resp.find("<string>RT&lt;TY&gt;</string>") != std::string::npos);
+  // Strings go out untyped, as fldigi sends them: CQRLOG takes whatever stands between
+  // <value> and </value> as the answer.
+  CHECK(resp.find("<value>RT&lt;TY&gt;</value>") != std::string::npos);
+  CHECK(resp.find("<string>") == std::string::npos);
+  // A request written by serializeRequest reads back, and its string is untyped too.
+  std::string call = serializeRequest("log.add_record", {Value::string("<CALL:4>W1AW<eor>"), Value::integer(7)});
+  CHECK(call.find("<value>&lt;CALL:4&gt;W1AW&lt;eor&gt;</value>") != std::string::npos);
+  CHECK(parseRequest(call, method, params, err));
+  CHECK_EQ(method, std::string("log.add_record"));
+  CHECK_EQ(params.size(), size_t(2));
+  CHECK_EQ(params[0].asString(), std::string("<CALL:4>W1AW<eor>"));
+  CHECK_EQ(params[1].asInt(), 7);
   std::string fault = serializeFault(1, "bad");
   CHECK(fault.find("<fault>") != std::string::npos && fault.find("faultString") != std::string::npos);
 

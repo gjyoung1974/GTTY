@@ -14,6 +14,8 @@
 #include "core/log/logbook.h"
 #include "core/macros.h"
 #include "core/net/cluster_client.h"
+#include "core/net/fllog_client.h"
+#include "core/net/spot_server.h"
 #include "core/net/wsjtx_udp.h"
 #include "core/net/xmlrpc_server.h"
 
@@ -158,6 +160,9 @@ class MainWindow {
   void gtSendStatus();
   void gtReportLine(const std::string& line);
   void gtReportQso(const Qso& q);
+  void fllogReportQso(const Qso& q);
+  void openSpotServer();
+  void spotSkimmed(const std::string& text, double markHz);
   void gtHandle(const wsjtx::Incoming& in);
 
   // callbacks
@@ -278,6 +283,10 @@ class MainWindow {
   std::string rxTextLog_;        // all primary-decoder text, for XML-RPC text.get_rx
   std::vector<double> notches_;
   xmlrpc::Server rpc_;
+  FllogForwarder fllog_;
+  SpotServer spotServer_;
+  struct SentSpot { double freqHz; int64_t at; };
+  std::map<std::string, SentSpot> sentSpots_;   // callsign -> where and when it was last spotted
   std::string rpcRigName_;
   int64_t txEmptySince_ = 0;   // monotonic µs when the TX buffer last became empty (0 = not empty)
   bool txSentAny_ = false;     // something was sent in this transmission (arms Auto RX)

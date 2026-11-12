@@ -8,6 +8,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <fcntl.h>
+
+#include <cerrno>
+#include <chrono>
 #include <cstring>
 #include <cstdlib>
 
@@ -245,7 +249,10 @@ std::string serializeValue(const Value& v) {
     case Value::Type::Int: return "<value><i4>" + std::to_string(v.i) + "</i4></value>";
     case Value::Type::Double: { char buf[64]; snprintf(buf, sizeof buf, "%.10g", v.d); return std::string("<value><double>") + buf + "</double></value>"; }
     case Value::Type::Bool: return std::string("<value><boolean>") + (v.b ? "1" : "0") + "</boolean></value>";
-    case Value::Type::String: return "<value><string>" + xmlEscape(v.s) + "</string></value>";
+    // Untyped, as fldigi's XmlRpc++ writes strings. Some clients do not parse the reply but cut
+    // the text between <value> and </value> (CQRLOG), or read the element's text and reject child
+    // elements (QLog's fllog server), so a <string> wrapper would end up in their fields.
+    case Value::Type::String: return "<value>" + xmlEscape(v.s) + "</value>";
     case Value::Type::Base64: return "<value><base64>" + base64Encode(v.s) + "</base64></value>";
     case Value::Type::Array: {
       std::string o = "<value><array><data>";
@@ -270,6 +277,12 @@ std::string serializeFault(int code, const std::string& message) {
          "<member><name>faultCode</name><value><int>" + std::to_string(code) + "</int></value></member>"
          "<member><name>faultString</name><value><string>" + xmlEscape(message) + "</string></value></member>"
          "</struct></value></fault></methodResponse>\n";
+}
+
+std::string serializeRequest(const std::string& method, const std::vector<Value>& params) {
+  std::string o = "<?xml version=\"1.0\"?>\n<methodCall><methodName>" + xmlEscape(method) + "</methodName><params>";
+  for (const auto& p : params) o += "<param>" + serializeValue(p) + "</param>";
+  return o + "</params></methodCall>\n";
 }
 
 bool parseRequest(const std::string& xml, std::string& method, std::vector<Value>& params, std::string& err) {
@@ -321,80 +334,135 @@ bool Server::start(const std::string& bindAddr, uint16_t port, std::string& err)
 
 void Server::stop() {
   run_ = false;
-  if (fd_ >= 0) { ::shutdown(fd_, SHUT_RDWR); ::close(fd_); fd_ = -1; }
-  if (thread_.joinable()) thread_.join();
+  if (thread_.joinable()) thread_.join();   // the loop looks at run_ at least every 200 ms
+  if (fd_ >= 0) { ::close(fd_); fd_ = -1; }
 }
 
-void Server::loop() {
-  while (run_) {
-    pollfd p{fd_, POLLIN, 0};
-    int r = ::poll(&p, 1, 200);
-    if (r <= 0) continue;
-    int client = ::accept(fd_, nullptr, nullptr);
-    if (client < 0) continue;
-    serve(client);
-    ::close(client);
+namespace {
+
+struct Conn {
+  int fd = -1;
+  std::string in, out;
+  std::chrono::steady_clock::time_point lastActive;
+  bool closeAfterWrite = false;
+  bool dead = false;
+};
+
+constexpr size_t kMaxConns = 32;
+constexpr size_t kMaxRequest = 1u << 20;
+constexpr auto kIdle = std::chrono::seconds(60);   // a kept-alive connection nobody uses
+
+void flushConn(Conn& c) {
+  while (!c.out.empty()) {
+    ssize_t n = ::send(c.fd, c.out.data(), c.out.size(), net::sendFlags());
+    if (n > 0) { c.out.erase(0, static_cast<size_t>(n)); continue; }
+    if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
+    c.dead = true;
+    return;
   }
+  if (c.closeAfterWrite) c.dead = true;
 }
 
-void Server::serve(int client) {
-  net::noSigPipe(client);
-  timeval tv{5, 0};
-  setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
-  setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof tv);
-  // Some clients (xmlrpc-c) reuse the connection: serve requests until it closes.
-  std::string buf;
-  char tmp[4096];
-  for (;;) {
-    size_t hdrEnd;
-    while ((hdrEnd = buf.find("\r\n\r\n")) == std::string::npos) {
-      ssize_t n = ::recv(client, tmp, sizeof tmp, 0);
-      if (n <= 0) return;
-      buf.append(tmp, static_cast<size_t>(n));
-      if (buf.size() > (1u << 20)) return;
-    }
-    std::string headers = buf.substr(0, hdrEnd);
-    size_t contentLength = 0;
-    {
-      std::string lower;
-      for (char ch : headers) lower += static_cast<char>(tolower(static_cast<unsigned char>(ch)));
-      size_t cl = lower.find("content-length:");
-      if (cl != std::string::npos) contentLength = strtoul(lower.c_str() + cl + 15, nullptr, 10);
-    }
-    size_t bodyStart = hdrEnd + 4;
-    while (buf.size() < bodyStart + contentLength) {
-      ssize_t n = ::recv(client, tmp, sizeof tmp, 0);
-      if (n <= 0) return;
-      buf.append(tmp, static_cast<size_t>(n));
-    }
-    std::string body = buf.substr(bodyStart, contentLength);
-    buf.erase(0, bodyStart + contentLength);
-    requests_++;
+}  // namespace
 
-    std::string method, err, response;
-    std::vector<Value> params;
-    if (!parseRequest(body, method, params, err)) {
-      response = serializeFault(-32700, "parse error: " + err);
-    } else if (!handler_) {
-      response = serializeFault(-32601, "no handler");
-    } else {
-      try {
-        response = serializeResponse(handler_(method, params));
-      } catch (const std::exception& e) {
-        response = serializeFault(-32500, e.what());
+// One thread, many connections. Loggers differ: CQRLOG opens a connection per
+// call and reads until it is closed, xmlrpc-c and Python keep one open between
+// calls. Every connection is served as its requests arrive, so a program that
+// holds its connection open does not keep the others waiting.
+void Server::loop() {
+  std::vector<Conn> conns;
+  while (run_) {
+    std::vector<pollfd> pfds;
+    pfds.push_back({fd_, POLLIN, 0});
+    for (const auto& c : conns) pfds.push_back({c.fd, static_cast<short>(POLLIN | (c.out.empty() ? 0 : POLLOUT)), 0});
+    int r = ::poll(pfds.data(), pfds.size(), 200);
+    if (r < 0 && errno != EINTR) break;
+    auto now = std::chrono::steady_clock::now();
+
+    if (r > 0 && (pfds[0].revents & POLLIN)) {
+      int client = ::accept(fd_, nullptr, nullptr);
+      if (client >= 0) {
+        if (conns.size() >= kMaxConns) {
+          ::close(client);
+        } else {
+          net::noSigPipe(client);
+          ::fcntl(client, F_SETFD, FD_CLOEXEC);
+          ::fcntl(client, F_SETFL, ::fcntl(client, F_GETFL) | O_NONBLOCK);
+          Conn c;
+          c.fd = client;
+          c.lastActive = now;
+          conns.push_back(std::move(c));
+        }
       }
     }
-    std::string http = "HTTP/1.1 200 OK\r\nContent-Type: text/xml\r\nContent-Length: " +
-                       std::to_string(response.size()) + "\r\nServer: gtty\r\n\r\n" + response;
-    size_t off = 0;
-    while (off < http.size()) {
-      ssize_t n = ::send(client, http.data() + off, http.size() - off, net::sendFlags());
-      if (n <= 0) return;
-      off += static_cast<size_t>(n);
+
+    for (size_t i = 0; i < conns.size() && i + 1 < pfds.size(); ++i) {
+      Conn& c = conns[i];
+      short ev = r > 0 && pfds[i + 1].fd == c.fd ? pfds[i + 1].revents : 0;
+      if (ev & POLLIN) {
+        char tmp[4096];
+        ssize_t n = ::recv(c.fd, tmp, sizeof tmp, 0);
+        if (n > 0) {
+          c.in.append(tmp, static_cast<size_t>(n));
+          c.lastActive = now;
+          if (c.in.size() > kMaxRequest) c.dead = true;
+        } else if (n == 0 || (errno != EAGAIN && errno != EWOULDBLOCK)) {
+          c.dead = true;
+        }
+      } else if (ev & (POLLERR | POLLHUP | POLLNVAL)) {
+        c.dead = true;
+      }
+      while (!c.dead && !c.closeAfterWrite && serveOne(c.in, c.out, c.closeAfterWrite)) {}
+      if (!c.dead) flushConn(c);
+      if (!c.dead && now - c.lastActive > kIdle) c.dead = true;
     }
-    bool keepAlive = headers.find("HTTP/1.1") != std::string::npos && headers.find("Connection: close") == std::string::npos;
-    if (!keepAlive) return;
+    for (auto it = conns.begin(); it != conns.end();) {
+      if (it->dead) { ::close(it->fd); it = conns.erase(it); }
+      else ++it;
+    }
   }
+  for (auto& c : conns) ::close(c.fd);
+}
+
+// Takes one complete HTTP request off the front of `in`, if there is one, and
+// appends the reply to `out`. `close` is set when the connection is to be closed
+// once the reply has gone out (HTTP/1.0, or "Connection: close").
+bool Server::serveOne(std::string& in, std::string& out, bool& close) {
+  size_t hdrEnd = in.find("\r\n\r\n");
+  if (hdrEnd == std::string::npos) return false;
+  std::string headers = in.substr(0, hdrEnd);
+  std::string lower;
+  for (char ch : headers) lower += static_cast<char>(tolower(static_cast<unsigned char>(ch)));
+  size_t contentLength = 0;
+  size_t cl = lower.find("content-length:");
+  if (cl != std::string::npos) contentLength = strtoul(lower.c_str() + cl + 15, nullptr, 10);
+  size_t bodyStart = hdrEnd + 4;
+  if (contentLength > kMaxRequest) { in.clear(); close = true; return false; }
+  if (in.size() < bodyStart + contentLength) return false;
+  std::string body = in.substr(bodyStart, contentLength);
+  in.erase(0, bodyStart + contentLength);
+  requests_++;
+
+  std::string method, err, response;
+  std::vector<Value> params;
+  if (!parseRequest(body, method, params, err)) {
+    response = serializeFault(-32700, "parse error: " + err);
+  } else if (!handler_) {
+    response = serializeFault(-32601, "no handler");
+  } else {
+    try {
+      response = serializeResponse(handler_(method, params));
+    } catch (const std::exception& e) {
+      response = serializeFault(-32500, e.what());
+    }
+  }
+  // Keep the connection only for HTTP/1.1 clients that did not ask to close; an
+  // HTTP/1.0 client such as CQRLOG reads until the connection is closed.
+  bool keepAlive = headers.find("HTTP/1.1") != std::string::npos && lower.find("connection: close") == std::string::npos;
+  out += "HTTP/1.1 200 OK\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(response.size()) +
+         "\r\nServer: gtty\r\n" + (keepAlive ? "" : "Connection: close\r\n") + "\r\n" + response;
+  if (!keepAlive) close = true;
+  return true;
 }
 
 }  // namespace gtty::xmlrpc
