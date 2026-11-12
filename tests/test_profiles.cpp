@@ -60,12 +60,19 @@ int main() {
   CHECK(c.loadProfile("Contest"));
   CHECK_EQ(c.rtty.baud, 50.0);
   c.rtty.baud = 75;
+  CHECK(!c.modemOnly);
+  CHECK_EQ(c.bands[4].lastHz, 0.0);                    // 20m, not visited yet
+  c.modemOnly = true;
+  c.bands[4].lastHz = 14091500;
   c.save();
   CHECK_EQ(Profiles::current(), std::string("Contest"));
   Settings again;
   again.load();
   CHECK_EQ(again.profile, std::string("Contest"));
   CHECK_EQ(again.rtty.baud, 75.0);
+  CHECK(again.modemOnly);                              // modem-only view and band memory persist
+  CHECK_EQ(again.bands[4].lastHz, 14091500.0);
+  CHECK_EQ(again.bands[3].lastHz, 0.0);
   Settings def;
   CHECK(def.loadProfile("Default"));
   CHECK_EQ(def.rtty.baud, 50.0);                       // the source is untouched

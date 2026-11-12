@@ -259,7 +259,10 @@ bool Settings::loadFrom(const std::string& path) {
   rig.pollMs = integer(kf, "rig", "poll_ms", rig.pollMs);
   manualDialHz = dbl(kf, "rig", "manual_dial_hz", manualDialHz);
   rigFilterHz = integer(kf, "rig", "filter_hz", rigFilterHz);
-  for (auto& b : bands) b.hz = dbl(kf, "bands", b.label.c_str(), b.hz);
+  for (auto& b : bands) {
+    b.hz = dbl(kf, "bands", b.label.c_str(), b.hz);
+    b.lastHz = dbl(kf, "band_memory", b.label.c_str(), 0);
+  }
 
   rtty.baud = dbl(kf, "rtty", "baud", rtty.baud);
   rtty.shift = dbl(kf, "rtty", "shift", rtty.shift);
@@ -318,6 +321,7 @@ bool Settings::loadFrom(const std::string& path) {
   clusterMaxAgeMin = integer(kf, "cluster", "max_age_min", clusterMaxAgeMin);
   bandMapVisible = boolean(kf, "cluster", "bandmap_visible", bandMapVisible);
   bandMapThisBand = boolean(kf, "cluster", "bandmap_this_band", bandMapThisBand);
+  modemOnly = boolean(kf, "ui", "modem_only", modemOnly);
   callbookProvider = integer(kf, "callbook", "provider", callbookProvider);
   callbookUser = str(kf, "callbook", "user", callbookUser);
   callbookPass = str(kf, "callbook", "password", callbookPass);
@@ -375,7 +379,10 @@ bool Settings::saveTo(const std::string& path) const {
   g_key_file_set_integer(kf, "rig", "poll_ms", rig.pollMs);
   g_key_file_set_double(kf, "rig", "manual_dial_hz", manualDialHz);
   g_key_file_set_integer(kf, "rig", "filter_hz", rigFilterHz);
-  for (const auto& b : bands) g_key_file_set_double(kf, "bands", b.label.c_str(), b.hz);
+  for (const auto& b : bands) {
+    g_key_file_set_double(kf, "bands", b.label.c_str(), b.hz);
+    if (b.lastHz > 0) g_key_file_set_double(kf, "band_memory", b.label.c_str(), b.lastHz);
+  }
 
   g_key_file_set_double(kf, "rtty", "baud", rtty.baud);
   g_key_file_set_double(kf, "rtty", "shift", rtty.shift);
@@ -434,6 +441,7 @@ bool Settings::saveTo(const std::string& path) const {
   g_key_file_set_integer(kf, "cluster", "max_age_min", clusterMaxAgeMin);
   g_key_file_set_boolean(kf, "cluster", "bandmap_visible", bandMapVisible);
   g_key_file_set_boolean(kf, "cluster", "bandmap_this_band", bandMapThisBand);
+  g_key_file_set_boolean(kf, "ui", "modem_only", modemOnly);
   g_key_file_set_integer(kf, "callbook", "provider", callbookProvider);
   g_key_file_set_string(kf, "callbook", "user", callbookUser.c_str());
   g_key_file_set_string(kf, "callbook", "password", callbookPass.c_str());

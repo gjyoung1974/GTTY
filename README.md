@@ -42,6 +42,9 @@ Features:
   preamble, PTT lead time, "Net" (TX follows the AFC-tracked RX tones).
 - **Band buttons** for the customary RTTY segments on 160–6 m (editable in
   Preferences ==> Bands); they QSY the rig, or set the manual dial when no rig is connected.
+  Each band remembers the last frequency you used on it.
+- **Modem-only view** (Ctrl+M) hides the band buttons, macros and log row when a
+  contest logger such as TLF is driving gtty over XML-RPC.
 - **Hamlib** rig control: frequency/mode display, PTT (CAT, DTR, RTS), TX mode
   switching, NET rigctld support.
 - **Logging**: SQLite logbook, ADIF export, dupe check, Super Check Partial

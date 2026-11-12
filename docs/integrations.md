@@ -40,6 +40,8 @@ Then point the logger's fldigi settings at `127.0.0.1:7362`:
 - **CQRLOG**: *Preferences → fldigi/wsjtx interface*, fldigi port 7362. CQRLOG reads decoded text, fills its log fields from gtty's log row and can send text.
 - **TLF**: set `FLDIGI=127.0.0.1:7362` in `logcfg.dat` and use RTTY mode. TLF reads the receive text, keys TX and RX, sets the frequency and drives the log fields.
 
+With a logger in charge, [Modem-only view](main-window.md#modem-only-view) (**Ctrl+M**) hides gtty's own band buttons, macros and log row.
+
 ### Methods
 
 gtty answers the fldigi methods loggers use:
