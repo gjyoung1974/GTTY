@@ -27,6 +27,7 @@ int tonePresetIndex(double mark, double space);
 struct BandPreset {
   std::string label;  // "20m"
   double hz;          // typical RTTY dial frequency
+  double lastHz = 0;  // where the dial last was on this band (0 = not visited yet)
 };
 std::vector<BandPreset> defaultBands();
 
@@ -125,6 +126,7 @@ struct Settings {
   int clusterMaxAgeMin = 30;
   bool bandMapVisible = true;
   bool bandMapThisBand = false;
+  bool modemOnly = false;         // hide band buttons, macros and the log row (a logger drives gtty)
   // callbook
   int callbookProvider = 0;       // 0 none, 1 QRZ.com XML (subscription), 2 HamQTH
   std::string callbookUser, callbookPass;

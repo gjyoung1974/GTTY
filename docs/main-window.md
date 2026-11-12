@@ -18,7 +18,7 @@ The dividers between the waterfall, the receive panes and the transmit pane can 
 | Mode | The rig's mode and filter width, *manual* when rig control is off, *rig offline* when it is on but the rig did not answer |
 | RX / TX / TUNE / ID | What the transmitter is doing. Green while receiving, red while keyed |
 | Sidebar button | Shows or hides the band map and Skimmer sidebar |
-| ☰ menu | Preferences, Configurations, Band map, Skimmer, Send CW ID, Reset AFC, Clear RX, Clear all text, Clear notches, Export ADIF, Help, About |
+| ☰ menu | Preferences, Configurations, Band map, Skimmer, Modem-only view, Send CW ID, Reset AFC, Clear RX, Clear all text, Clear notches, Export ADIF, Help, About |
 
 The window title shows the name of the active configuration when it is not *Default*.
 
@@ -71,6 +71,12 @@ The pane is cleared when the transmitter returns to receive unless *Clear the TX
 ## Band buttons
 
 One button per band from 160 m to 6 m, each tuned to the customary RTTY segment. The current band is highlighted. With a rig connected the button QSYs the rig; without one it sets the manual dial frequency. Edit the frequencies under *Preferences → Bands*. Hovering a button shows its frequency.
+
+Each band remembers where the dial last was, including across restarts, and its button returns you there. Click the button of the band you are already on to go to the preset frequency instead.
+
+## Modem-only view
+
+When a contest logger such as TLF drives gtty over XML-RPC, the logger has its own band switching, macros and log entry. **☰ → Modem-only view** (**Ctrl+M**) hides the band buttons, the macro buttons and the log row, leaving the waterfall, the receive panes, the transmit pane and the control row. The sidebar keeps its own toggle, so the Skimmer list can stay open. The F-key macros still work while hidden. The choice is saved with the configuration.
 
 ## Macro buttons
 

@@ -15,6 +15,7 @@ nav_order: 16
 | **Esc** | Abort: drop PTT at once and clear the transmit pane |
 | **Ctrl+L** | Log the QSO |
 | **Ctrl+K** | Clear the receive and transmit text |
+| **Ctrl+M** | Modem-only view: hide or show the band buttons, macros and log row |
 | **Ctrl+,** | Preferences |
 | **Ctrl+F1** | Open this manual in a browser |
 

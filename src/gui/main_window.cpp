@@ -66,6 +66,7 @@ MainWindow::MainWindow(AdwApplication* app)
   openSessionLog();
   openCluster();
   setBandMapVisible(settings_.bandMapVisible);
+  setModemOnly(settings_.modemOnly);
   applyRttyParams(true);
   rx_.start();
   tickId_ = g_timeout_add(33, onTick, this);
@@ -130,9 +131,13 @@ void MainWindow::buildUi(AdwApplication* app) {
   gtk_paned_set_position(GTK_PANED(outerPaned), 240);
   gtk_box_append(GTK_BOX(vbox), outerPaned);
 
-  gtk_box_append(GTK_BOX(vbox), buildBandBar());
-  gtk_box_append(GTK_BOX(vbox), buildMacroBar());
-  gtk_box_append(GTK_BOX(vbox), buildLogRow());
+  // Kept so the modem-only view can hide them.
+  bandBar_ = buildBandBar();
+  macroBar_ = buildMacroBar();
+  logRow_ = buildLogRow();
+  gtk_box_append(GTK_BOX(vbox), bandBar_);
+  gtk_box_append(GTK_BOX(vbox), macroBar_);
+  gtk_box_append(GTK_BOX(vbox), logRow_);
   gtk_box_append(GTK_BOX(vbox), buildControlRow());
   gtk_box_append(GTK_BOX(vbox), buildStatusBar());
 
@@ -205,6 +210,7 @@ GtkWidget* MainWindow::buildHeader() {
   g_menu_append_submenu(menu, "Con_figurations", G_MENU_MODEL(profilesMenu_));
   g_menu_append(menu, "Band _map", "win.bandmap");
   g_menu_append(menu, "S_kimmer", "win.skimmer");
+  g_menu_append(menu, "Modem-_only view", "win.modem-only");
   g_menu_append(menu, "Send CW _ID", "win.cw-id");
   g_menu_append(menu, "Reset _AFC", "win.reset-afc");
   g_menu_append(menu, "_Clear RX", "win.clear-rx");
@@ -425,7 +431,12 @@ void MainWindow::onBandClicked(GtkButton* b, gpointer p) {
   auto* self = static_cast<MainWindow*>(p);
   int idx = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(b), "band-index"));
   if (idx < 0 || idx >= static_cast<int>(self->settings_.bands.size())) return;
-  self->setDial(self->settings_.bands[idx].hz);
+  // Return to where the dial last was on that band. A click on the band you
+  // are already on goes to the preset, so the segment centre is one more click away.
+  const BandPreset& band = self->settings_.bands[idx];
+  bool onThisBand = bandForFrequency(self->dialFreqHz()) == band.label;
+  bool remembered = band.lastHz > 0 && bandForFrequency(band.lastHz) == band.label;
+  self->setDial(!onThisBand && remembered ? band.lastHz : band.hz);
 }
 
 void MainWindow::setDial(double hz) {
@@ -456,6 +467,7 @@ void MainWindow::updateBandHighlight() {
   if (band != bandMapBand_) { bandMapBand_ = band; bandMapDirty_ = true; }
   for (size_t i = 0; i < bandButtons_.size() && i < settings_.bands.size(); ++i) {
     bool on = !band.empty() && settings_.bands[i].label == band;
+    if (on) settings_.bands[i].lastHz = dialFreqHz();   // per-band memory for the band buttons
     if (on) gtk_widget_add_css_class(bandButtons_[i], "band-active");
     else gtk_widget_remove_css_class(bandButtons_[i], "band-active");
     char tip[48];
@@ -616,6 +628,9 @@ void MainWindow::installActions() {
   bandMapAction_ = g_simple_action_new_stateful("bandmap", nullptr, g_variant_new_boolean(settings_.bandMapVisible));
   g_signal_connect(bandMapAction_, "activate", G_CALLBACK(onBandMapToggled), this);
   g_action_map_add_action(G_ACTION_MAP(window_), G_ACTION(bandMapAction_));
+  modemOnlyAction_ = g_simple_action_new_stateful("modem-only", nullptr, g_variant_new_boolean(settings_.modemOnly));
+  g_signal_connect(modemOnlyAction_, "activate", G_CALLBACK(onModemOnlyToggled), this);
+  g_action_map_add_action(G_ACTION_MAP(window_), G_ACTION(modemOnlyAction_));
   GtkApplication* app = gtk_window_get_application(GTK_WINDOW(window_));
   const char* prefsAccels[] = {"<Control>comma", nullptr};
   gtk_application_set_accels_for_action(app, "win.prefs", prefsAccels);
@@ -627,6 +642,8 @@ void MainWindow::installActions() {
   gtk_application_set_accels_for_action(app, "win.abort-tx", abortAccels);
   const char* logAccels[] = {"<Control>l", nullptr};
   gtk_application_set_accels_for_action(app, "win.log-qso", logAccels);
+  const char* modemOnlyAccels[] = {"<Control>m", nullptr};
+  gtk_application_set_accels_for_action(app, "win.modem-only", modemOnlyAccels);
   const char* clearTextAccels[] = {"<Control>k", nullptr};
   gtk_application_set_accels_for_action(app, "win.clear-text", clearTextAccels);
   // Plain F1 runs a macro, so Help takes Ctrl+F1.
@@ -1394,6 +1411,7 @@ void MainWindow::applySettings() {
   openSessionLog();
   openCluster();
   setBandMapVisible(settings_.bandMapVisible);
+  setModemOnly(settings_.modemOnly);
   applyDecoderSettings();
   lookedUpCall_.clear();
   updateFreqDisplay(rigState_);
@@ -1798,6 +1816,20 @@ void MainWindow::openCluster() {
 void MainWindow::setBandMapVisible(bool on) {
   gtk_widget_set_visible(bandMapBox_, on);
   if (bandMapAction_) g_simple_action_set_state(bandMapAction_, g_variant_new_boolean(on));
+}
+
+// Modem-only view: when a contest logger drives gtty over XML-RPC it has its
+// own band switching, macros and log entry, so those rows are only clutter.
+void MainWindow::setModemOnly(bool on) {
+  for (GtkWidget* w : {bandBar_, macroBar_, logRow_})
+    if (w) gtk_widget_set_visible(w, !on);
+  if (modemOnlyAction_) g_simple_action_set_state(modemOnlyAction_, g_variant_new_boolean(on));
+}
+
+void MainWindow::onModemOnlyToggled(GSimpleAction*, GVariant*, gpointer p) {
+  auto* self = static_cast<MainWindow*>(p);
+  self->settings_.modemOnly = !self->settings_.modemOnly;
+  self->setModemOnly(self->settings_.modemOnly);
 }
 
 void MainWindow::onBandMapToggled(GSimpleAction*, GVariant*, gpointer p) {

@@ -42,6 +42,8 @@ Then point the logger's fldigi settings at `127.0.0.1:7362`:
 
 ### Methods
 
+With a logger in charge, [Modem-only view](main-window.md#modem-only-view) (**Ctrl+M**) hides gtty's own band buttons, macros and log row.
+
 gtty answers the fldigi methods loggers use:
 
 | Group | Methods |

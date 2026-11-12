@@ -17,3 +17,10 @@ docs/_site/
 docs/.jekyll-cache/
 docs/vendor/
 *.dmg
+# build output
+build-*/
+*.a
+CTestTestfile.cmake
+CPack*.cmake
+/changelog.gz
+/src/cli/gtty-cli

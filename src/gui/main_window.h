@@ -120,6 +120,7 @@ class MainWindow {
   void rebuildBandMap();
   void ageSpots();
   void setBandMapVisible(bool on);
+  void setModemOnly(bool on);
   void scheduleCallLookup();
   void lookupCall();
   void applyCallbook(const CallbookResult& r);
@@ -132,6 +133,7 @@ class MainWindow {
   static void onTuneToggled(GtkToggleButton* b, gpointer self);
   static gboolean onCallLookupTimeout(gpointer self);
   static void onBandMapToggled(GSimpleAction* a, GVariant* v, gpointer self);
+  static void onModemOnlyToggled(GSimpleAction* a, GVariant* v, gpointer self);
 
   // operating features
   void clearTxBuffer();
@@ -214,6 +216,10 @@ class MainWindow {
   GtkWidget* audioBanner_ = nullptr;         // persistent "audio not working" notice above the content
   GMenu* profilesMenu_ = nullptr;
   GSimpleAction* bandMapAction_ = nullptr;
+  GSimpleAction* modemOnlyAction_ = nullptr;
+  GtkWidget* bandBar_ = nullptr;
+  GtkWidget* macroBar_ = nullptr;
+  GtkWidget* logRow_ = nullptr;
   GSimpleAction* skimmerAction_ = nullptr;
   GtkWidget* sideStack_ = nullptr;
   GtkWidget* skimList_ = nullptr;
