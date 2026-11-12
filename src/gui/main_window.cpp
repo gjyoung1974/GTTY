@@ -210,7 +210,6 @@ GtkWidget* MainWindow::buildHeader() {
   g_menu_append_submenu(menu, "Con_figurations", G_MENU_MODEL(profilesMenu_));
   g_menu_append(menu, "Band _map", "win.bandmap");
   g_menu_append(menu, "S_kimmer", "win.skimmer");
-  g_menu_append(menu, "Modem-_only view", "win.modem-only");
   g_menu_append(menu, "Send CW _ID", "win.cw-id");
   g_menu_append(menu, "Reset _AFC", "win.reset-afc");
   g_menu_append(menu, "_Clear RX", "win.clear-rx");
@@ -849,6 +848,13 @@ void MainWindow::poll() {
   Event e;
   int budget = 200;
   while (budget-- > 0 && events_.pop(e)) handle(e);
+  // fldigi "^r" from a logger: return to receive once everything queued has gone
+  // out. Waiting for the queue to empty (rather than stopping at once) lets a
+  // second message that arrives meanwhile go out in the same transmission.
+  if (rxWhenTxEmpty_ && tx_.transmitting() && !tx_.stopping() && !tx_.tuning()) {
+    sendPendingTxText(true);   // "^r" ends the message: do not hold back the last word
+    if (tx_.pending() == 0) stopTx();
+  }
   // Auto RX: drop back to receive once everything typed or queued has gone out.
   if (tx_.transmitting() && !tx_.stopping() && settings_.autoRx && txSentAny_) {
     std::string unsent = unsentTxText();
@@ -1077,13 +1083,26 @@ void MainWindow::startTx() {
 }
 
 void MainWindow::stopTx() {
+  rxWhenTxEmpty_ = false;
   if (!tx_.transmitting()) return;
   sendPendingTxText(true);
   tx_.stopTx();
 }
 
+// fldigi's main.rx, as a logger uses it to stop a message (TLF: Escape, or a
+// new message while one is going out): finish the character on the air, drop
+// the rest, and leave unsent text in the TX pane for the logger to clear.
+void MainWindow::stopTxNow() {
+  rxWhenTxEmpty_ = false;
+  setAutoCq(false);
+  if (!tx_.transmitting()) return;
+  tx_.cancelPending();
+  tx_.stopTx();
+}
+
 void MainWindow::abortTx() {
   setAutoCq(false);
+  rxWhenTxEmpty_ = false;
   tx_.abortTx();
   clearTxBuffer();
 }
@@ -1114,6 +1133,14 @@ void MainWindow::insertTxText(const std::string& text) {
   GtkTextIter end;
   gtk_text_buffer_get_end_iter(txBuf_, &end);
   gtk_text_buffer_insert(txBuf_, &end, text.c_str(), -1);
+}
+
+// Text queued by a logger over XML-RPC. fldigi's "^r" is taken out and acted on:
+// back to receive when the text has been sent (see poll()).
+void MainWindow::insertLoggerTxText(const std::string& text) {
+  TxControlText t = extractTxControls(text);
+  if (!t.text.empty()) insertTxText(t.text);
+  if (t.returnToRx && (tx_.transmitting() || !unsentTxText().empty())) rxWhenTxEmpty_ = true;
 }
 
 void MainWindow::onTxBufferChanged(GtkTextBuffer*, gpointer p) {
@@ -1689,7 +1716,7 @@ void MainWindow::onSkimmerToggled(GSimpleAction*, GVariant*, gpointer p) {
   self->settings_.skimmerEnabled = !self->settings_.skimmerEnabled;
   self->applyDecoderSettings();
   if (self->settings_.skimmerEnabled) {
-    self->settings_.bandMapVisible = true;
+    (self->settings_.modemOnly ? self->modemSidebar_ : self->settings_.bandMapVisible) = true;
     self->setBandMapVisible(true);
     gtk_stack_set_visible_child_name(GTK_STACK(self->sideStack_), "skimmer");
   }
@@ -1820,10 +1847,14 @@ void MainWindow::setBandMapVisible(bool on) {
 
 // Modem-only view: when a contest logger drives gtty over XML-RPC it has its
 // own band switching, macros and log entry, so those rows are only clutter.
+// The band map / Skimmer sidebar is hidden as well; the header-bar button still
+// opens it for the session (modemSidebar_) without changing the saved choice
+// for the full view.
 void MainWindow::setModemOnly(bool on) {
   for (GtkWidget* w : {bandBar_, macroBar_, logRow_})
     if (w) gtk_widget_set_visible(w, !on);
   if (modemOnlyAction_) g_simple_action_set_state(modemOnlyAction_, g_variant_new_boolean(on));
+  setBandMapVisible(on ? modemSidebar_ : settings_.bandMapVisible);
 }
 
 void MainWindow::onModemOnlyToggled(GSimpleAction*, GVariant*, gpointer p) {
@@ -1834,8 +1865,9 @@ void MainWindow::onModemOnlyToggled(GSimpleAction*, GVariant*, gpointer p) {
 
 void MainWindow::onBandMapToggled(GSimpleAction*, GVariant*, gpointer p) {
   auto* self = static_cast<MainWindow*>(p);
-  self->settings_.bandMapVisible = !self->settings_.bandMapVisible;
-  self->setBandMapVisible(self->settings_.bandMapVisible);
+  bool& shown = self->settings_.modemOnly ? self->modemSidebar_ : self->settings_.bandMapVisible;
+  shown = !shown;
+  self->setBandMapVisible(shown);
 }
 
 void MainWindow::addSpot(const Spot& s) {
@@ -2020,6 +2052,7 @@ void MainWindow::onIfShiftChanged(GtkSpinButton* s, gpointer p) {
 // ------------------------------------------------------ operating features
 
 void MainWindow::clearTxBuffer() {
+  if (!tx_.transmitting()) rxWhenTxEmpty_ = false;
   gtk_text_buffer_set_text(txBuf_, "", -1);
   GtkTextIter it;
   gtk_text_buffer_get_start_iter(txBuf_, &it);
@@ -2027,6 +2060,7 @@ void MainWindow::clearTxBuffer() {
 }
 
 void MainWindow::clearUnsentTx() {
+  if (!tx_.transmitting()) rxWhenTxEmpty_ = false;
   GtkTextIter a, b;
   gtk_text_buffer_get_iter_at_mark(txBuf_, &a, txSentMark_);
   gtk_text_buffer_get_end_iter(txBuf_, &b);
@@ -2218,7 +2252,7 @@ xmlrpc::Value MainWindow::rpcDispatch(const std::string& m, const std::vector<xm
   if (m == "main.get_trx_status") return V::string(tx_.transmitting() ? "tx" : "rx");
   if (m == "main.get_trx_state") return V::string(tx_.transmitting() ? "TX" : "RX");
   if (m == "main.tx") { startTx(); return V::nil(); }
-  if (m == "main.rx") { stopTx(); return V::nil(); }
+  if (m == "main.rx") { stopTxNow(); return V::nil(); }
   if (m == "main.abort") { abortTx(); return V::nil(); }
   if (m == "main.tune") return V::nil();
   if (m == "main.get_afc") return V::boolean(settings_.afc);
@@ -2269,7 +2303,7 @@ xmlrpc::Value MainWindow::rpcDispatch(const std::string& m, const std::vector<xm
     return V::base64(rxTextLog_.substr(static_cast<size_t>(start), static_cast<size_t>(len)));
   }
   if (m == "text.clear_rx") { clearRx(); rxTextLog_.clear(); return V::nil(); }
-  if (m == "text.add_tx" || m == "text.add_tx_bytes") { insertTxText(arg(0).asString()); return V::nil(); }
+  if (m == "text.add_tx" || m == "text.add_tx_bytes") { insertLoggerTxText(arg(0).asString()); return V::nil(); }
   if (m == "text.clear_tx") { clearUnsentTx(); return V::nil(); }
 
   if (m == "log.get_call") return V::string(entryText(callEntry_));
@@ -2287,7 +2321,8 @@ xmlrpc::Value MainWindow::rpcDispatch(const std::string& m, const std::vector<xm
     return V::string(buf);
   }
   if (m == "log.set_serial_number") { gtk_spin_button_set_value(GTK_SPIN_BUTTON(serialSpin_), arg(0).asDouble()); return V::nil(); }
-  if (m == "log.get_frequency") { char buf[32]; snprintf(buf, sizeof buf, "%.0f", dialFreqHz()); return V::string(buf); }
+  // The Frequency field of fldigi's log row is in kHz; TLF and CQRLOG rely on it.
+  if (m == "log.get_frequency") { char buf[32]; snprintf(buf, sizeof buf, "%.3f", dialFreqHz() / 1000.0); return V::string(buf); }
   if (m == "log.get_time_on" || m == "log.get_time_off") return V::string(Logbook::nowUtc().substr(11, 2) + Logbook::nowUtc().substr(14, 2));
   if (m == "log.get_band") return V::string(bandForFrequency(dialFreqHz()));
   if (m == "log.get_locator") return V::string(ctx_.grid);

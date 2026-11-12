@@ -23,6 +23,15 @@ struct MacroAction {
 
 std::vector<MacroAction> expandMacro(const std::string& macro, const MacroContext& ctx);
 
+// fldigi control codes embedded in text a logger queues over XML-RPC
+// (text.add_tx). "^r" (or "^R") asks for a return to receive once the text has
+// gone out; it is removed from the text and never transmitted.
+struct TxControlText {
+  std::string text;          // the text with the control codes removed
+  bool returnToRx = false;   // a "^r" was present
+};
+TxControlText extractTxControls(const std::string& text);
+
 // Default F1..F12 macro set for casual RTTY QSOs / contesting.
 struct MacroDef { std::string label, text; };
 std::vector<MacroDef> defaultMacros();

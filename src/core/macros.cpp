@@ -67,6 +67,20 @@ std::vector<MacroAction> expandMacro(const std::string& macro, const MacroContex
   return out;
 }
 
+TxControlText extractTxControls(const std::string& text) {
+  TxControlText out;
+  out.text.reserve(text.size());
+  for (size_t i = 0; i < text.size(); ++i) {
+    if (text[i] == '^' && i + 1 < text.size() && (text[i + 1] == 'r' || text[i + 1] == 'R')) {
+      out.returnToRx = true;
+      ++i;
+    } else {
+      out.text.push_back(text[i]);
+    }
+  }
+  return out;
+}
+
 std::vector<MacroDef> defaultMacros() {
   return {
       {"CQ", "<TX>CQ CQ CQ DE <MYCALL> <MYCALL> <MYCALL> PSE K\n<RX>"},

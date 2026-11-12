@@ -216,6 +216,14 @@ void Transmitter::stopTx() {
   tick();
 }
 
+void Transmitter::cancelPending() {
+  if (!txOn_ || tuning_) return;
+  mod_.clearQueue();
+  keyer_.clearQueue();
+  { std::lock_guard<std::mutex> lk(catMu_); catPending_.clear(); }
+  if (cfg_.method == TxConfig::Method::CatText && rig_) rig_->stopText();
+}
+
 void Transmitter::abortTx() {
   if (!txOn_) return;
   cwActive_ = false;

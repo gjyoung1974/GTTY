@@ -28,6 +28,12 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+`tests/integration/test_not1mm.py` checks gtty against [Not1MM](https://github.com/mbridak/not1mm): it starts a private gtty and a Hamlib dummy radio behind `rigctld`, then drives them with Not1MM's own fldigi and rigctld client classes (F-key messages, the `^r` return to receive, PTT, QSY in both directions). It needs a Not1MM checkout (`NOT1MM_SRC`, or `../not1mm`), a display, and `rigctld` for the radio tests (`RIGCTLD`, or `libhamlib-utils`). Run it directly, or with `GTTY_INTEGRATION=1 ctest --test-dir build -R not1mm`; otherwise ctest reports it as skipped.
+
+`tests/integration/test_tlf.py` does the same for [TLF](https://github.com/Tlf/tlf). TLF is a C program, so the test repeats the sequence of fldigi calls from TLF's `src/fldigixmlrpc.c` instead of loading its code: sending a message, Escape, a new message replacing one that is going out, the log frequency in kHz, QSY, auto-QSY and reading the receive text. Run it with `GTTY_INTEGRATION=1 ctest --test-dir build -R tlf`.
+
+`tests/integration/test_not1mm_gui.py` goes one step further and plays an operator: it starts Not1MM's real main window (off-screen, with an empty configuration and log of its own) beside gtty in the modem-only view and types into it. It sets the frequency and mode, calls CQ with F1, plays an answering station into gtty as RTTY audio, sends the call and exchange with F2 and F3, and logs the QSO with Enter, checking gtty and Not1MM's log at each step. It additionally needs a Python that can import Not1MM and PyQt6 (`NOT1MM_PYTHON`, or the uv or pipx tool environment) and, for the received audio, `pactl` and `paplay`.
+
 CMake options: `GTTY_BUILD_GUI` (default ON) and `GTTY_BUILD_TESTS` (default ON). libcurl and libcodec2 are picked up when present.
 
 The same commands build on Linux and on macOS. Platform differences are confined to two places: `src/core/rig/fsk_keyer.cpp` (custom serial baud rates and bit-bang timing) and `src/core/net/socket_compat.h` (the Linux-only `SOCK_CLOEXEC`/`SOCK_NONBLOCK` socket flags and `MSG_NOSIGNAL`). Keep new platform code in those files rather than spreading `#ifdef`s.

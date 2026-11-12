@@ -55,6 +55,7 @@ class Transmitter : private TxSource {
   void startTx();
   void stopTx();    // graceful: finish the queue, then PTT off
   void abortTx();   // immediate
+  void cancelPending();  // drop everything queued but not yet started; follow with stopTx()
   bool transmitting() const { return txOn_.load(); }
   bool stopping() const { return stopping_.load(); }
   size_t pending() const;

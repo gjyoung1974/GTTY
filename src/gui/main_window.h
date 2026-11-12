@@ -79,6 +79,8 @@ class MainWindow {
   void abortTx();
   void sendPendingTxText(bool flushAll = false);
   void insertTxText(const std::string& text);
+  void stopTxNow();                                  // logger's main.rx: stop after the current character
+  void insertLoggerTxText(const std::string& text);  // honors fldigi's "^r"
   void runMacro(int idx);
   void editMacro(int idx);
 
@@ -227,6 +229,7 @@ class MainWindow {
   std::vector<GtkWidget*> rxPanes_;          // per text slot (engines, then the vote slot)
   std::vector<GtkWidget*> modeDrops_;        // per bank slot; null where the engine has no modes
   GtkWidget* bandMapBox_ = nullptr;
+  bool modemSidebar_ = false;    // sidebar opened by hand while in the modem-only view (not saved)
   GtkWidget* bandMapList_ = nullptr;
   GtkWidget* bandMapStatus_ = nullptr;
   GtkWidget* bandMapThisBandCheck_ = nullptr;
@@ -278,6 +281,7 @@ class MainWindow {
   std::string rpcRigName_;
   int64_t txEmptySince_ = 0;   // monotonic µs when the TX buffer last became empty (0 = not empty)
   bool txSentAny_ = false;     // something was sent in this transmission (arms Auto RX)
+  bool rxWhenTxEmpty_ = false; // a logger sent "^r": return to receive once the TX text has gone out
   GtkWidget* squelchScale_ = nullptr;
   GtkWidget* baudDrop_ = nullptr;
   GtkWidget* shiftDrop_ = nullptr;

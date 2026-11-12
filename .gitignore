@@ -24,3 +24,15 @@ CTestTestfile.cmake
 CPack*.cmake
 /changelog.gz
 /src/cli/gtty-cli
+# Python bytecode from the integration tests
+__pycache__/
+# binaries from an in-source build (build in build/ instead)
+/src/gui/gtty
+/tests/test_*
+!/tests/test_*.cpp
+# TLF working files, from running tlf in this directory
+logcfg.dat
+tlfmarkers
+.paras
+.bmdata.dat
+/*.log

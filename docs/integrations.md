@@ -40,7 +40,7 @@ Then point the logger's fldigi settings at `127.0.0.1:7362`:
 - **CQRLOG**: *Preferences → fldigi/wsjtx interface*, fldigi port 7362. CQRLOG reads decoded text, fills its log fields from gtty's log row and can send text.
 - **TLF**: add `FLDIGI` and `RTTYMODE` to `logcfg.dat`. TLF reads the receive text, sends its messages through gtty and keys TX and RX. See [Using gtty with TLF](#using-gtty-with-tlf) below.
 
-With a logger in charge, [Modem-only view](main-window.md#modem-only-view) (**Ctrl+M**) hides gtty's own band buttons, macros and log row.
+With a logger in charge, the [modem-only view](main-window.md#modem-only-view) (the default; *Preferences → Station*, or **Ctrl+M**) hides gtty's own band buttons, macros and log row.
 
 ## Using gtty with TLF
 
@@ -50,7 +50,7 @@ With a logger in charge, [Modem-only view](main-window.md#modem-only-view) (**Ct
 
 1. *Preferences → Integration*: tick **Enable XML-RPC server**. Leave the address at 127.0.0.1 and the port at 7362.
 2. Set up audio, keying and your tones as for normal operating, and check that gtty decodes and transmits by itself first.
-3. Press **Ctrl+M** for the [modem-only view](main-window.md#modem-only-view). TLF has its own band switching, messages and log entry, so gtty's are not needed.
+3. Leave the [modem-only view](main-window.md#modem-only-view) on (*Preferences → Station*; it is the default). TLF has its own band switching, messages and log entry, so gtty's are not needed.
 
 A separate [configuration](configurations.md) for contesting with TLF keeps these settings apart from everyday operating.
 
@@ -75,6 +75,8 @@ DIGI_RIG_MODE=LSB
 | `DIGI_RIG_MODE` | The mode TLF puts the rig in for RTTY: `LSB`, `USB`, `RTTY` or `RTTYR`. With `FLDIGI` set TLF defaults to USB, so set this to the mode you use with gtty: usually `LSB` for AFSK and `RTTY` for FSK |
 
 `DIGI_RIG_MODE` only has an effect when TLF controls the rig; see [Sharing the rig](#3-sharing-the-rig).
+
+With rig control on and the rig in RTTY (FSK) mode, TLF keeps the tones at a fixed place on the waterfall: when you click a signal in gtty, TLF moves gtty's tones back to a centre of 2210 Hz (mark 2125) and retunes the rig by the difference. If your tones in gtty are elsewhere, set `FLDIGI_RTTY_SWEET_SPOT` in `logcfg.dat` to their centre frequency, or to `0` to switch this off.
 
 The F-key messages for RTTY are the `DKF1` to `DKF12` lines. In them `%` is your call, `@` the other station's call, `#` the serial number, `[` the report and `|` a new line:
 
@@ -103,7 +105,7 @@ Only one program can hold the CAT port. Pick one:
 
 ### 4. Operate
 
-Start gtty first, then run `tlf` in the contest directory. Keep the keyboard focus in TLF and use gtty for tuning: click a signal on the waterfall or a line in the Skimmer list.
+Start gtty first, then run `tlf` in the contest directory. Keep the keyboard focus in TLF and use gtty for tuning: click a signal on the waterfall, or open the sidebar with its header-bar button and click a line in the Skimmer list.
 
 | Key in TLF | Action |
 |---|---|
@@ -138,6 +140,10 @@ gtty answers the fldigi methods loggers use:
 | Frequency and TX | `main.get_frequency`, `main.set_frequency`, `main.inc_frequency`, `main.tx`, `main.rx`, `main.abort`, `main.get_trx_status`, `main.get_trx_state`, `main.get_sideband` |
 | Decoder | `main.get_afc`, `main.set_afc`, `main.toggle_afc`, `main.get_squelch`, `main.set_squelch`, `main.toggle_squelch`, `main.get_squelch_level`, `main.set_squelch_level`, `main.get_reverse`, `main.set_reverse`, `main.toggle_reverse` |
 | Text | `text.get_rx_length`, `text.get_rx`, `text.clear_rx`, `text.add_tx`, `text.add_tx_bytes`, `text.clear_tx` |
+
+`main.rx` stops a transmission the way a logger expects of fldigi: the character on the air is finished and the rest of the queued text is dropped (TLF sends it for Escape, and before a new message while one is still going out). gtty's own RX button still sends what is queued first. `log.get_frequency` is the dial frequency as text in kHz, as in fldigi's log row.
+
+As in fldigi, `^r` in text given to `text.add_tx` is not transmitted: it returns gtty to receive once the text queued so far has gone out. Loggers such as Not1MM end every message with it.
 | Macros | `main.run_macro` (0-based), `main.get_max_macro_id` |
 | Log fields | `log.get_call`, `log.set_call`, `log.get_name`, `log.set_name`, `log.get_rst_in`, `log.set_rst_in`, `log.get_rst_out`, `log.set_rst_out`, `log.get_exchange`, `log.set_exchange`, `log.get_serial_number`, `log.set_serial_number`, `log.get_serial_number_sent`, `log.get_frequency`, `log.get_time_on`, `log.get_time_off`, `log.get_band`, `log.get_locator`, `log.set_locator`, `log.get_qth`, `log.set_qth`, `log.clear` |
 | Rig | `rig.get_name`, `rig.set_name`, `rig.get_frequency`, `rig.set_frequency`, `rig.get_mode`, `rig.set_mode`, `rig.get_modes`, `rig.get_notch`, `rig.set_notch` |

@@ -18,7 +18,7 @@ The dividers between the waterfall, the receive panes and the transmit pane can 
 | Mode | The rig's mode and filter width, *manual* when rig control is off, *rig offline* when it is on but the rig did not answer |
 | RX / TX / TUNE / ID | What the transmitter is doing. Green while receiving, red while keyed |
 | Sidebar button | Shows or hides the band map and Skimmer sidebar |
-| ☰ menu | Preferences, Configurations, Band map, Skimmer, Modem-only view, Send CW ID, Reset AFC, Clear RX, Clear all text, Clear notches, Export ADIF, Help, About |
+| ☰ menu | Preferences, Configurations, Band map, Skimmer, Send CW ID, Reset AFC, Clear RX, Clear all text, Clear notches, Export ADIF, Help, About |
 
 The window title shows the name of the active configuration when it is not *Default*.
 
@@ -76,7 +76,7 @@ Each band remembers where the dial last was, including across restarts, and its 
 
 ## Modem-only view
 
-When a contest logger such as TLF drives gtty over XML-RPC, the logger has its own band switching, macros and log entry. **☰ → Modem-only view** (**Ctrl+M**) hides the band buttons, the macro buttons and the log row, leaving the waterfall, the receive panes, the transmit pane and the control row. The sidebar keeps its own toggle, so the Skimmer list can stay open. The F-key macros still work while hidden. The choice is saved with the configuration.
+When a contest logger such as TLF drives gtty over XML-RPC, the logger has its own band switching, macros and log entry. The modem-only view hides the band buttons, the macro buttons, the log row and the sidebar, leaving the waterfall, the receive panes, the transmit pane and the control row. It is on by default; turn it off under *Preferences → Station → Modem-only view*, or switch it with **Ctrl+M**, to use gtty's own band buttons, macros and log. The band map and Skimmer sidebar is hidden too; its button in the header bar opens it when you want the Skimmer list, without changing whether it shows in the full view. The F-key macros still work while hidden. The choice is saved with the configuration.
 
 ## Macro buttons
 

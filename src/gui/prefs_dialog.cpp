@@ -34,7 +34,7 @@ struct Prefs {
   GtkWidget *rxTimestamps, *rxLogToFile, *rxLogDir;
   GtkWidget *rpcEnabled, *rpcBind, *rpcPort;
   GtkWidget *myCall, *myName, *myQth, *myGrid;
-  GtkWidget *scpPath, *logPath, *wfLo, *wfHi, *wfDir, *fontSize, *theme;
+  GtkWidget *scpPath, *logPath, *wfLo, *wfHi, *wfDir, *fontSize, *theme, *modemOnly;
   GtkWidget *gtEnabled, *gtHost, *gtPort, *gtDecodes, *gtLogged, *gtReply;
   std::vector<GtkWidget*> bandRows;
 };
@@ -189,6 +189,7 @@ void onClosed(AdwDialog*, gpointer p) {
   s.waterfallDirection = selected(pr->wfDir);
   s.fontSize = static_cast<int>(value(pr->fontSize));
   s.theme = selected(pr->theme);
+  s.modemOnly = active(pr->modemOnly);
   s.gtEnabled = active(pr->gtEnabled);
   s.gtHost = text(pr->gtHost);
   s.gtPort = static_cast<int>(value(pr->gtPort));
@@ -388,6 +389,8 @@ void showPrefsDialog(GtkWidget* parent, Settings& s, std::function<void()> onApp
     pr->rxTimestamps = toggle(g2, "Timestamps at the start of each received line", s.rxTimestamps);
     pr->rxLogToFile = toggle(g2, "Save received and sent text to a daily session file", s.rxLogToFile);
     pr->rxLogDir = entry(g2, "Session file directory", s.rxLogDir);
+    pr->modemOnly = toggle(g2, "Modem-only view", s.modemOnly,
+                           "Hide the band buttons, macros, log row and sidebar (Ctrl+M)");
     pr->theme = combo(g2, "Appearance", {"Follow system", "Light", "Dark"}, s.theme);
     // Preview immediately while the dialog is open.
     g_signal_connect(pr->theme, "notify::selected", G_CALLBACK(+[](GObject* row, GParamSpec*, gpointer) {
