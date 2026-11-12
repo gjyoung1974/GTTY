@@ -31,6 +31,37 @@ int64_t nowUnix() {
 }
 }  // namespace
 
+std::string toDisplayText(const std::string& in) {
+  // Valid UTF-8 passes; anything else is read as Latin-1, which is what older nodes send.
+  bool valid = true;
+  for (size_t i = 0; i < in.size() && valid;) {
+    unsigned char c = static_cast<unsigned char>(in[i]);
+    size_t n = c < 0x80 ? 1 : (c >= 0xC2 && c <= 0xDF) ? 2 : (c >= 0xE0 && c <= 0xEF) ? 3 : (c >= 0xF0 && c <= 0xF4) ? 4 : 0;
+    if (n == 0 || i + n > in.size()) { valid = false; break; }
+    for (size_t k = 1; k < n; ++k)
+      if ((static_cast<unsigned char>(in[i + k]) & 0xC0) != 0x80) valid = false;
+    if (n == 3 && c == 0xE0 && static_cast<unsigned char>(in[i + 1]) < 0xA0) valid = false;   // overlong
+    if (n == 3 && c == 0xED && static_cast<unsigned char>(in[i + 1]) > 0x9F) valid = false;   // surrogates
+    if (n == 4 && c == 0xF0 && static_cast<unsigned char>(in[i + 1]) < 0x90) valid = false;   // overlong
+    if (n == 4 && c == 0xF4 && static_cast<unsigned char>(in[i + 1]) > 0x8F) valid = false;   // past U+10FFFF
+    i += n;
+  }
+  std::string out;
+  for (size_t i = 0; i < in.size(); ++i) {
+    unsigned char c = static_cast<unsigned char>(in[i]);
+    if (c < 0x20 || c == 0x7f) continue;                       // controls, DEL
+    if (c < 0x80 || valid) {
+      // C1 controls (U+0080..U+009F, encoded C2 80..C2 9F) print nothing either.
+      if (valid && c == 0xC2 && i + 1 < in.size() && static_cast<unsigned char>(in[i + 1]) < 0xA0) { ++i; continue; }
+      out.push_back(static_cast<char>(c));
+    } else if (c >= 0xA0) {                                    // Latin-1 printable
+      out.push_back(static_cast<char>(0xC0 | (c >> 6)));
+      out.push_back(static_cast<char>(0x80 | (c & 0x3F)));
+    }
+  }
+  return out;
+}
+
 bool parseSpotLine(const std::string& raw, Spot& out) {
   std::string line = trim(raw);
   if (line.size() < 20 || upper(line.substr(0, 6)) != "DX DE ") return false;
@@ -245,6 +276,8 @@ void ClusterClient::loop() {
         if (c == 0xff) continue;  // telnet IAC sequences are ignored; servers tolerate no reply
         if (c == '\r') continue;
         if (c == '\n') {
+          // What goes to the band map and the status line must be printable, valid UTF-8.
+          buf = toDisplayText(buf);
           Spot s;
           if (parseSpotLine(buf, s)) { if (onSpot) onSpot(s); }
           else if (onLine && !trim(buf).empty()) onLine(trim(buf));

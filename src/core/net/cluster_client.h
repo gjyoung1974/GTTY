@@ -24,6 +24,10 @@ struct Spot {
 //   "DX de W1AW:     14083.5  DL1ABC       RTTY cq                   1234Z FN31"
 // Returns false if the line is not a spot.
 bool parseSpotLine(const std::string& line, Spot& out);
+// Text from a cluster node made fit to show: control characters removed, and bytes
+// that are not valid UTF-8 read as Latin-1 (operators' names and comments with
+// accents, from nodes that do not send UTF-8). The result is valid UTF-8.
+std::string toDisplayText(const std::string& in);
 // True if the spot is plausibly RTTY: the comment mentions RTTY, or it names no
 // other mode and the frequency lies in a customary RTTY/digital segment.
 bool looksLikeRtty(const Spot& s);

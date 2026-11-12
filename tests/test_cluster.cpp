@@ -30,6 +30,17 @@ int main() {
   CHECK(parseSpotLine("DX de N0CALL:   14205.0  VK3ABC       rtty test                  1500Z", s));
   CHECK(looksLikeRtty(s));    // explicit RTTY wins
 
+  // Text from the node, made fit to show: valid UTF-8 stays, Latin-1 is converted,
+  // control characters and DEL go.
+  CHECK_EQ(toDisplayText("tnx Jos\xC3\xA9 73"), std::string("tnx Jos\xC3\xA9 73"));     // UTF-8 as sent
+  CHECK_EQ(toDisplayText("tnx Jos\xE9 73"), std::string("tnx Jos\xC3\xA9 73"));          // Latin-1 e-acute
+  CHECK_EQ(toDisplayText("a\x07" "b\x7f" "c\x1b[0m"), std::string("abc[0m"));
+  CHECK_EQ(toDisplayText("x\x85y"), std::string("xy"));                                    // a C1 control in Latin-1
+  CHECK_EQ(toDisplayText("x\xC2\x85y"), std::string("xy"));                               // the same in UTF-8
+  CHECK_EQ(toDisplayText("\xE2\x82"), std::string("\xC3\xA2"));                         // cut-off UTF-8: nothing invalid left
+  CHECK(parseSpotLine(toDisplayText("DX de EA1XX:     14083.5  DL1ABC       RTTY Jos\xE9          1234Z"), s));
+  CHECK_EQ(s.comment, std::string("RTTY Jos\xC3\xA9"));
+
   // Not spots.
   CHECK(!parseSpotLine("login: ", s));
   CHECK(!parseSpotLine("WWV de W0MU <18>:   SFI=140, A=5, K=1, No Storms", s));
