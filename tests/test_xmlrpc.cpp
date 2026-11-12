@@ -41,7 +41,7 @@ int main() {
   CHECK(parseRequest("<methodCall><methodName>main.tx</methodName></methodCall>", method, params, err));
   CHECK(!parseRequest("<nonsense/>", method, params, err));
 
-  // Serialise + base64 round trip.
+  // Serialize + base64 round trip.
   CHECK_EQ(base64Encode("Hello"), std::string("SGVsbG8="));
   CHECK_EQ(base64Decode("SGVsbG8="), std::string("Hello"));
   CHECK_EQ(base64Decode(base64Encode("ab")), std::string("ab"));
@@ -51,7 +51,7 @@ int main() {
   std::string fault = serializeFault(1, "bad");
   CHECK(fault.find("<fault>") != std::string::npos && fault.find("faultString") != std::string::npos);
 
-  // Notch filter: attenuates its centre, passes a tone 300 Hz away.
+  // Notch filter: attenuates its center, passes a tone 300 Hz away.
   {
     Biquad n = Biquad::notch(2125, 60, 12000);
     double eOn = 0, eOff = 0;

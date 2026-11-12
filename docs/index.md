@@ -25,6 +25,7 @@ gtty is an amateur radio RTTY terminal for the Linux and macOS desktop. It decod
 | Keep separate setups for contests, rigs or portable | [Configurations](configurations.md) |
 | Use DX cluster spots | [DX cluster band map](cluster.md) |
 | Connect GridTracker, CQRLOG, TLF and friends | [Integrations](integrations.md) |
+| Contest with the TLF logger | [Using gtty with TLF](integrations.md#using-gtty-with-tlf) |
 | Decode recordings or test from a terminal | [gtty-cli](gtty-cli.md) |
 | Fix a problem | [Troubleshooting](troubleshooting.md) |
 | Look up a shortcut, a file path or a default | [Reference](reference.md) |

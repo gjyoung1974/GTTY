@@ -20,7 +20,7 @@ struct DemodConfig {
   double filterLengthBits = 1.0; // matched filter length in bit periods
   int matchedWindow = 1;         // 0 boxcar, 1 Hann (raised cosine)
   double atcTauSec = 0.25;       // ATC peak-follower time constant
-  double bitWindow = 0.33;       // fraction of the bit period integrated around each bit centre
+  double bitWindow = 0.33;       // fraction of the bit period integrated around each bit center
   double afcGain = 0.35;         // fraction of the measured error applied per character
   float squelch = 0.0f;          // 0 = off .. 1 = only perfect signals
   // Correlator engine: how strongly the start (space) and stop (mark) cells must
@@ -47,7 +47,7 @@ struct CodeEvent {
 struct DemodStatus {
   double afcOffsetHz = 0;      // current mark frequency minus nominal
   float quality = 0;           // 0..1
-  float markLevel = 0, spaceLevel = 0;  // normalised 0..1
+  float markLevel = 0, spaceLevel = 0;  // normalized 0..1
   bool squelched = false;
   uint64_t chars = 0, framingErrors = 0;
 };
@@ -73,7 +73,7 @@ class RttyDemodulator {
   std::function<void(const CodeEvent&)> onCode;     // raw 5-bit code with timing and confidence
 };
 
-// Behaviour presets for the matched-filter engines (2Tone/MMTTY-style modes).
+// Behavior presets for the matched-filter engines (2Tone/MMTTY-style modes).
 enum class DecoderMode { Normal = 0, Selective = 1, Flutter = 2, Custom = 3 };
 const char* decoderModeName(DecoderMode m);
 // Applies the preset's filter length, window and ATC time constant; Custom leaves them.

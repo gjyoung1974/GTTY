@@ -315,7 +315,7 @@ void showPrefsDialog(GtkWidget* parent, Settings& s, std::function<void()> onApp
         pr->dec[i].mode = combo(g, "Mode", {"Normal", "Selective (narrow, crowded band)", "Flutter (wide, fast ATC)", "Custom"}, d.mode);
         adw_action_row_set_subtitle(ADW_ACTION_ROW(pr->dec[i].mode), "Also switchable from the pane header; Custom uses the three values below");
         pr->dec[i].filterBits = spin(g, "Custom: matched filter length (bit periods)", 0.3, 2.0, 0.1, d.filterBits, 1);
-        adw_action_row_set_subtitle(ADW_ACTION_ROW(pr->dec[i].filterBits), "Shorter = wider bandwidth, follows flutter; longer = narrower, rejects neighbours");
+        adw_action_row_set_subtitle(ADW_ACTION_ROW(pr->dec[i].filterBits), "Shorter = wider bandwidth, follows flutter; longer = narrower, rejects neighbors");
         pr->dec[i].window = combo(g, "Custom: filter window", {"Boxcar (true matched filter)", "Hann (better adjacent-signal rejection)"}, d.window);
         pr->dec[i].atcTau = spin(g, "Custom: ATC time constant (s)", 0.02, 3.0, 0.02, d.atcTau, 2);
       }

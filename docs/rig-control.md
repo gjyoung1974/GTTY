@@ -40,7 +40,7 @@ The **Filter** dropdown under the tuning scope selects the receiver filter width
 
 ## Band buttons
 
-The band buttons QSY the rig to the frequency set for each band under *Preferences → Bands*. The defaults are the centres of the customary RTTY segments:
+The band buttons QSY the rig to the frequency set for each band under *Preferences → Bands*. The defaults are the centers of the customary RTTY segments:
 
 | Band | kHz | Band | kHz |
 |---|---:|---|---:|
@@ -50,7 +50,7 @@ The band buttons QSY the rig to the frequency set for each band under *Preferenc
 | 30 m | 10142 | 10 m | 28080 |
 | 20 m | 14080 | 6 m | 50300 |
 
-The current band is highlighted. The band of the dial frequency is also what the logbook's dupe check and GridTracker use.
+Each band remembers the frequency it was last on, and its button returns there; clicking the button of the current band goes to the preset. The current band is highlighted. The band of the dial frequency is also what the logbook's dupe check and GridTracker use.
 
 ## Without a rig
 

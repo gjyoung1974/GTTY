@@ -40,17 +40,17 @@ sound card ──PortAudio──▶ SPSC ring ──▶ Receiver thread
 1. Two complex mixers translate the mark and space tones to baseband.
 2. Each baseband is filtered by a one-bit-long FIR (boxcar = true matched filter
    for rectangular FSK; Hann = better adjacent-signal rejection).
-3. Envelopes are normalised by per-tone peak followers (ATC, ~250 ms). The
+3. Envelopes are normalized by per-tone peak followers (ATC, ~250 ms). The
    decision variable is `d = m/mpk − s/spk` in [−1, 1].
 4. Asynchronous framing: a mark→space transition opens a character; each bit is
    decided from the mean of `d` over the middle third of the bit period; the start
-   bit is verified at its centre and the stop bit must be mark, else the character
+   bit is verified at its center and the stop bit must be mark, else the character
    is dropped (framing error counter).
 5. AFC: the instantaneous frequency of whichever channel carries the tone is
    averaged over strong bits and the LOs are moved by 35 % of the error per
    character, clamped to ±afcRange. Works for signals within ~±1 baud of the
    filters per step, iterating out to the range limit.
-6. Quality = EMA of |d| at bit centres, where a clean tone reads about 1 with ATC
+6. Quality = EMA of |d| at bit centers, where a clean tone reads about 1 with ATC
    on or off; the squelch slider (0..1) gates output below it. The correlator's
    quality is its correlation score on the same scale, so one slider fits all engines.
 7. Scope points are the two filtered channels re-modulated to their tone
@@ -97,7 +97,7 @@ socket polled from the GTK tick; no extra thread.
 
 ## fldigi-compatible XML-RPC (src/core/net/xmlrpc_server.cpp)
 
-A small HTTP/1.1 server with a hand-written XML-RPC parser and serialiser
+A small HTTP/1.1 server with a hand-written XML-RPC parser and serializer
 (string, int, double, boolean, base64, array, struct, nil). The handler runs on
 the server thread, so the GUI bridges each call onto the GTK main loop with
 `g_idle_add` and waits on a future (3 s timeout). Received text is kept in a
@@ -110,7 +110,7 @@ growing string so `text.get_rx(start, len)` offsets stay stable within a session
 - Hamlib poller (mutex around every `rig_*` call).
 - FSK keyer thread (UART pacing or bit-banging).
 - GTK main thread polls `EventQueue` at 30 Hz and drives `Transmitter::tick()`.
-- XML-RPC accept loop (one connection at a time, keep-alive honoured).
+- XML-RPC accept loop (one connection at a time, keep-alive honored).
 
 ### Decoder modes (src/core/modem/decoder_bank.cpp)
 
@@ -159,7 +159,7 @@ AFC. Its frame latency (~0.3 s) is why it does not vote by default.
 
 A `MatchedFilterDemod` (Normal preset, AFC range half a step, squelch ≥ 0.5)
 every `step` Hz across the waterfall range. A strong signal also decodes in the
-neighbouring channels, so at collection time only the channel with the highest
+neighboring channels, so at collection time only the channel with the highest
 absolute level within one shift reports (ties go to the lower channel). The GUI
 merges text per channel, extracts callsigns, shows the RF frequency (dial ±
 tone, by sideband) and tunes the main decoders to a clicked entry.

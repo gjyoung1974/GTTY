@@ -74,6 +74,6 @@ The manual is Markdown under `docs/` and is published to the [GitHub wiki](https
 python3 tools/build_wiki.py /tmp/gtty-wiki
 ```
 
-## Licence
+## License
 
 gtty is free software under the GNU General Public License, version 3 or later.

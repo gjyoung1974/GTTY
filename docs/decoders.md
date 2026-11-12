@@ -33,13 +33,13 @@ Engines A and B have a mode dropdown in their pane header and under *Preferences
 | Mode | Settings | When to use it |
 |---|---|---|
 | **Normal** | 0.6-bit Hann filter, 0.3 s ATC | Everyday use |
-| **Selective** | 1.0-bit Hann filter, 0.25 s ATC | Narrower: a crowded band, a strong neighbour, a strong signal |
+| **Selective** | 1.0-bit Hann filter, 0.25 s ATC | Narrower: a crowded band, a strong neighbor, a strong signal |
 | **Flutter** | 0.5-bit Hann filter, 0.3 s ATC, 25 % decision cell | Wider and faster: polar flutter, rapid fading |
 | **Custom** | The three values set in Preferences | Experiments |
 
 The three custom values are:
 
-- **Matched filter length** in bit periods (0.3 to 2.0). Shorter is wider in bandwidth and follows flutter; longer is narrower and rejects neighbours.
+- **Matched filter length** in bit periods (0.3 to 2.0). Shorter is wider in bandwidth and follows flutter; longer is narrower and rejects neighbors.
 - **Filter window**: boxcar is the true matched filter for rectangular FSK; Hann rejects adjacent signals better.
 - **ATC time constant** in seconds (0.02 to 3.0).
 
@@ -65,7 +65,7 @@ During the first second of a new signal only one engine may have an opinion, so 
 
 The Skimmer runs a decoder every 50 Hz (configurable from 20 to 200 Hz) across the whole waterfall range, so every RTTY signal in the receiver passband is decoded at once. Turn it on with **Skimmer** in the menu or under *Preferences → Decoders*. It uses CPU in proportion to the passband width and the channel step.
 
-Stations appear in the **Skimmer** page of the sidebar, sorted by frequency, with the RF frequency computed from the dial and the sideband, the callsign found in the text (or **?** until one has been seen), the age of the last decode and the last few characters received. Rows are coloured from the logbook: a new callsign in the accent colour, a dupe on this band dimmed.
+Stations appear in the **Skimmer** page of the sidebar, sorted by frequency, with the RF frequency computed from the dial and the sideband, the callsign found in the text (or **?** until one has been seen), the age of the last decode and the last few characters received. Rows are colored from the logbook: a new callsign in the accent color, a dupe on this band dimmed.
 
 **Click a row** to move the decoders to that signal and put the callsign in the Call field. Entries disappear 90 seconds after the station was last heard.
 

@@ -22,7 +22,7 @@ class Waterfall {
   bool reversed() const { return reversed_; }
   void addSpectrum(const std::vector<float>& db, double binHz);
 
-  // Left click or drag: desired centre of the tone pair (Hz). Right click: same, for rig retune.
+  // Left click or drag: desired center of the tone pair (Hz). Right click: same, for rig retune.
   // Scroll wheel: nudge by deltaHz.
   std::function<void(double hz)> onClickTune;
   std::function<void(double hz)> onRightClickTune;

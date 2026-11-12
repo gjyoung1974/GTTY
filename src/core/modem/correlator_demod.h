@@ -1,7 +1,7 @@
 // Joint-timing character correlator ("ML" decoder in the Gritty style).
 //
 // The front end is the same as the matched-filter engine (complex mixers at
-// mark and space, short filters, ATC normalisation) and yields one soft
+// mark and space, short filters, ATC normalization) and yields one soft
 // decision sample d in [-1, 1] per input sample. Instead of triggering on the
 // first mark->space edge, the decoder keeps the recent d(t) history and, for
 // every candidate start instant, correlates a whole 7-bit character

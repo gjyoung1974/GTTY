@@ -40,7 +40,7 @@ Many rigs with a built-in USB sound card present two serial ports. One carries C
 
 ## Typing and sending
 
-Press **Ctrl+T** or the **TX** button to key the transmitter; text typed in the transmit pane then goes out as it is typed. Sent text turns grey. A macro with a `<TX>` tag does the same.
+Press **Ctrl+T** or the **TX** button to key the transmitter; text typed in the transmit pane then goes out as it is typed. Sent text turns gray. A macro with a `<TX>` tag does the same.
 
 - **Word mode type-ahead** sends only after each space or Enter, so a typo can be fixed before the word is sent. With Auto RX on, a dangling partial word is sent once the Auto RX delay has passed.
 - **Ctrl+R** or the **TX** button again finishes sending what is queued and then drops PTT.

@@ -50,7 +50,7 @@ if(GTTY_BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
-# ------------------------------------------------- docs, man pages, licence
+# ------------------------------------------------- docs, man pages, license
 find_program(GZIP_EXECUTABLE gzip)
 if(GZIP_EXECUTABLE)
   foreach(pair "packaging/changelog;changelog.gz" "packaging/gtty.1;gtty.1.gz" "packaging/gtty-cli.1;gtty-cli.1.gz")

@@ -20,7 +20,7 @@ class Skimmer {
   };
 
   // Channels every stepHz from loHz to hiHz (mark frequency). Each channel's AFC
-  // range is half a step so neighbouring channels do not chase the same signal.
+  // range is half a step so neighboring channels do not chase the same signal.
   void configure(const DemodConfig& base, double loHz, double hiHz, double stepHz);
   void clear() { channels_.clear(); }
   size_t size() const { return channels_.size(); }

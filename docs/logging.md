@@ -27,7 +27,7 @@ The logbook lives at `~/.local/share/gtty/logbook.sqlite` by default; the path i
 
 ## Dupe check and worked-before
 
-As soon as a callsign is in the Call field, **DUPE** appears in red if that call is already in the log on the current band in RTTY. The same check colours rows in the band map and the Skimmer list: dupes are dimmed, calls never worked are in the accent colour.
+As soon as a callsign is in the Call field, **DUPE** appears in red if that call is already in the log on the current band in RTTY. The same check colors rows in the band map and the Skimmer list: dupes are dimmed, calls never worked are in the accent color.
 
 Once a complete callsign has been typed (600 ms after the last keystroke), the info label shows *New* or how often and when you last worked the station, for example *Wkd 3×, last 2026-03-14 20m Bob*. With **Fill Name, QTH and grid from the lookup** on (*Preferences → Callbook*), the name from the last QSO is filled in and QTH and grid are remembered for the log entry.
 

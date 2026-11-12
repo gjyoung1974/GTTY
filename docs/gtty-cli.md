@@ -72,7 +72,7 @@ THE QUICK BROWN FOX ...
 | `--filter-bits F` | Matched filter length in bit periods |
 | `--window 0|1` | 0 boxcar, 1 Hann |
 | `--atc-tau S` | ATC time constant in seconds |
-| `--bit-window F` | Fraction of the bit period integrated around each bit centre |
+| `--bit-window F` | Fraction of the bit period integrated around each bit center |
 | `--afc-gain G` | Fraction of the measured error applied per character |
 | `--corr-edge F`, `--corr-accept F` | Correlator start/stop cell threshold and acceptance score |
 | `--engines all` | Run every engine, including the codec2 comparison decoder |
@@ -86,7 +86,7 @@ THE QUICK BROWN FOX ...
 | `--in N`, `--out N` | PortAudio device index from `gtty-cli devices` |
 | `--seconds N` | Recording length |
 | `--iq` | Treat a stereo file as I/Q baseband (an SDR recording) |
-| `--center HZ` | Audio frequency the I/Q centre is shifted to (default a quarter of the sample rate) |
+| `--center HZ` | Audio frequency the I/Q center is shifted to (default a quarter of the sample rate) |
 
 ### Rig
 

@@ -25,7 +25,7 @@ nav_order: 16
 |---|---|---|
 | Waterfall | Left click | Move the tone window to the pointer |
 | Waterfall | Drag inside the tone window | Slide the window |
-| Waterfall | Drag elsewhere | Drag the window centre with the pointer |
+| Waterfall | Drag elsewhere | Drag the window center with the pointer |
 | Waterfall | Scroll wheel | Nudge the tones by 10 Hz |
 | Waterfall | Right click | Retune the rig so the signal lands on the nominal tones |
 | Waterfall | Middle click | Place or remove a notch |
@@ -49,7 +49,7 @@ nav_order: 16
 | Clear notches | Remove every notch |
 | Export ADIF… | Write the logbook to an ADIF file |
 | Help | Open this manual in a browser (**Ctrl+F1**) |
-| About gtty | Version and licence |
+| About gtty | Version and license |
 
 ## Preferences pages
 
@@ -109,4 +109,4 @@ Band buttons and their default frequencies are listed under [Rig control](rig-co
 
 ## Signal processing summary
 
-The receive audio is resampled to 12 kHz. A 4096-point spectrum feeds the waterfall. The matched-filter engines mix the mark and space tones to baseband, filter each with a one-bit-long matched filter, normalise the envelopes with ATC, decide each bit from the middle of the bit period, verify the start and stop bits and drop characters that fail framing. AFC averages the instantaneous frequency over strong bits. The correlator matches whole characters against the 32 Baudot templates at every candidate start instant. A voter aligns the engines' characters in time and decides each one by confidence. Details are in the [architecture notes](ARCHITECTURE.md).
+The receive audio is resampled to 12 kHz. A 4096-point spectrum feeds the waterfall. The matched-filter engines mix the mark and space tones to baseband, filter each with a one-bit-long matched filter, normalize the envelopes with ATC, decide each bit from the middle of the bit period, verify the start and stop bits and drop characters that fail framing. AFC averages the instantaneous frequency over strong bits. The correlator matches whole characters against the 32 Baudot templates at every candidate start instant. A voter aligns the engines' characters in time and decides each one by confidence. Details are in the [architecture notes](ARCHITECTURE.md).

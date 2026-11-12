@@ -38,9 +38,94 @@ Loggers that drive fldigi can drive gtty. Tick **Enable XML-RPC server** and set
 Then point the logger's fldigi settings at `127.0.0.1:7362`:
 
 - **CQRLOG**: *Preferences → fldigi/wsjtx interface*, fldigi port 7362. CQRLOG reads decoded text, fills its log fields from gtty's log row and can send text.
-- **TLF**: set `FLDIGI=127.0.0.1:7362` in `logcfg.dat` and use RTTY mode. TLF reads the receive text, keys TX and RX, sets the frequency and drives the log fields.
+- **TLF**: add `FLDIGI` and `RTTYMODE` to `logcfg.dat`. TLF reads the receive text, sends its messages through gtty and keys TX and RX. See [Using gtty with TLF](#using-gtty-with-tlf) below.
 
 With a logger in charge, [Modem-only view](main-window.md#modem-only-view) (**Ctrl+M**) hides gtty's own band buttons, macros and log row.
+
+## Using gtty with TLF
+
+[TLF](https://github.com/Tlf/tlf) is a console contest logger. It has no RTTY modem of its own and normally drives fldigi; gtty takes fldigi's place. TLF is the logger and keeps the keyboard; gtty is the modem and shows the waterfall.
+
+### 1. Set up gtty
+
+1. *Preferences → Integration*: tick **Enable XML-RPC server**. Leave the address at 127.0.0.1 and the port at 7362.
+2. Set up audio, keying and your tones as for normal operating, and check that gtty decodes and transmits by itself first.
+3. Press **Ctrl+M** for the [modem-only view](main-window.md#modem-only-view). TLF has its own band switching, messages and log entry, so gtty's are not needed.
+
+A separate [configuration](configurations.md) for contesting with TLF keeps these settings apart from everyday operating.
+
+### 2. Set up TLF
+
+Make a directory for the contest and put a `logcfg.dat` in it. The lines that matter for gtty:
+
+```
+CALL=N0CALL
+RULES=cqww
+LOGFILE=cqww-rtty.log
+
+RTTYMODE
+FLDIGI
+DIGI_RIG_MODE=LSB
+```
+
+| Line | Purpose |
+|---|---|
+| `RTTYMODE` | Starts TLF in RTTY mode rather than CW |
+| `FLDIGI` | Connects to `http://localhost:7362/RPC2`, where gtty listens. For another port write `FLDIGI=http://localhost:7400/RPC2` |
+| `DIGI_RIG_MODE` | The mode TLF puts the rig in for RTTY: `LSB`, `USB`, `RTTY` or `RTTYR`. With `FLDIGI` set TLF defaults to USB, so set this to the mode you use with gtty: usually `LSB` for AFSK and `RTTY` for FSK |
+
+`DIGI_RIG_MODE` only has an effect when TLF controls the rig; see [Sharing the rig](#3-sharing-the-rig).
+
+The F-key messages for RTTY are the `DKF1` to `DKF12` lines. In them `%` is your call, `@` the other station's call, `#` the serial number, `[` the report and `|` a new line:
+
+```
+DKF1=|CQ TEST % % CQ |
+DKF2=|@ DE % |
+DKF3=|@ 599 # # |
+```
+
+A digital message that is not defined takes the text of the CW message for the same key. `man tlf` lists every keyword; `/usr/share/tlf/logcfg.dat` is a commented template and `/usr/share/tlf/rules` holds the contest rule files.
+
+### 3. Sharing the rig
+
+Only one program can hold the CAT port. Pick one:
+
+- **gtty owns the rig.** Leave `RADIO_CONTROL` out of `logcfg.dat`. Simplest, but TLF then does not know the frequency, so you set the band in TLF by hand.
+- **Both through rigctld.** Start `rigctld` for your rig, select Hamlib model 2 (NET rigctl) in gtty under *Preferences → Rig* with `localhost:4532` as the device, and in `logcfg.dat` set:
+
+  ```
+  RADIO_CONTROL
+  RIGMODEL=2
+  RIGPORT=localhost
+  ```
+
+  TLF then follows the rig's frequency and band, and both programs can QSY it. See [Rig control](rig-control.md).
+
+### 4. Operate
+
+Start gtty first, then run `tlf` in the contest directory. Keep the keyboard focus in TLF and use gtty for tuning: click a signal on the waterfall or a line in the Skimmer list.
+
+| Key in TLF | Action |
+|---|---|
+| Type a call, then **Space** | Moves to the exchange field |
+| **Enter** | Sends the next message for the state of the QSO and logs it when the exchange is complete |
+| **+** | Switches between CQ (running) and S&P |
+| **F1–F12** | Send the `DKF` messages through gtty |
+| **Escape** | Stops transmitting and clears the entry |
+| `:DIG`, `:CW`, `:SSB` | Change mode |
+| `:FLDIGI` | Switches the connection to gtty off and on |
+| `:WRI` | Writes the Cabrillo file |
+| **Alt+H** | TLF's key help |
+| **Alt+X** or `:EXIT` | Quit |
+
+Received text in TLF is gtty's Best guess stream. Text TLF sends appears in gtty's transmit pane as it goes out.
+
+### If it does not work
+
+- **No text in TLF, or F-keys do nothing**: check that the XML-RPC server is enabled in gtty and the port matches the `FLDIGI` line, then type `:FLDIGI` twice in TLF to reconnect. gtty must be running before TLF connects.
+- **fldigi is also running**: it already holds port 7362. Close it or give gtty another port.
+- **The rig changes sideband when TLF starts**: set `DIGI_RIG_MODE` as above.
+- **Rig control fails in one program**: both are opening the CAT port; use rigctld.
 
 ### Methods
 

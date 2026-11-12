@@ -140,7 +140,7 @@ void CorrelatorDemod::process(const float* in, size_t n) {
 }
 
 // Correlates the character starting at tau with all 32 templates. Returns the
-// best code and its normalised score (mean per-bit correlation, 0..1).
+// best code and its normalized score (mean per-bit correlation, 0..1).
 bool CorrelatorDemod::evaluate(uint64_t tau, uint8_t& code, float& score, float& start, float& stop) const {
   // Bit k occupies [tau + k*spb, tau + (k+1)*spb); integrate its central 60 %.
   float m[7];

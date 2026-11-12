@@ -5,7 +5,7 @@ nav_order: 12
 
 # DX cluster band map
 
-gtty can connect to a DX cluster node and show the RTTY spots as a band map in the sidebar, coloured from your logbook. Clicking a spot QSYs the rig and puts the callsign in the Call field.
+gtty can connect to a DX cluster node and show the RTTY spots as a band map in the sidebar, colored from your logbook. Clicking a spot QSYs the rig and puts the callsign in the Call field.
 
 ## Connecting
 
@@ -20,11 +20,11 @@ gtty reconnects with back-off when the connection drops. The status line at the 
 
 ## The band map
 
-Spots are listed by frequency with the callsign, the spot time, the comment and the spotter. Rows are coloured from the logbook:
+Spots are listed by frequency with the callsign, the spot time, the comment and the spotter. Rows are colored from the logbook:
 
 | Appearance | Meaning |
 |---|---|
-| Accent colour | A callsign you have never worked |
+| Accent color | A callsign you have never worked |
 | Normal | Worked before, but not on this band |
 | Dimmed | A dupe: already in the log on this band in RTTY |
 

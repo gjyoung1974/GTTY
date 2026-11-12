@@ -324,7 +324,7 @@ GtkWidget* MainWindow::buildRxPanes() {
       static const char* modes[] = {"Normal", "Selective", "Flutter", "Custom", nullptr};
       GtkWidget* drop = gtk_drop_down_new_from_strings(modes);
       gtk_widget_add_css_class(drop, "flat");
-      gtk_widget_set_tooltip_text(drop, "Decoder behaviour: Normal, Selective (narrow, for crowded bands), Flutter (wide, fast ATC), or the Custom values from Preferences → Decoders");
+      gtk_widget_set_tooltip_text(drop, "Decoder behavior: Normal, Selective (narrow, for crowded bands), Flutter (wide, fast ATC), or the Custom values from Preferences → Decoders");
       g_object_set_data(G_OBJECT(drop), "slot", GINT_TO_POINTER(static_cast<int>(i)));
       g_signal_connect(drop, "notify::selected", G_CALLBACK(onModeNotify), this);
       gtk_box_append(GTK_BOX(head), drop);
@@ -432,7 +432,7 @@ void MainWindow::onBandClicked(GtkButton* b, gpointer p) {
   int idx = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(b), "band-index"));
   if (idx < 0 || idx >= static_cast<int>(self->settings_.bands.size())) return;
   // Return to where the dial last was on that band. A click on the band you
-  // are already on goes to the preset, so the segment centre is one more click away.
+  // are already on goes to the preset, so the segment center is one more click away.
   const BandPreset& band = self->settings_.bands[idx];
   bool onThisBand = bandForFrequency(self->dialFreqHz()) == band.label;
   bool remembered = band.lastHz > 0 && bandForFrequency(band.lastHz) == band.label;
@@ -1296,7 +1296,7 @@ void MainWindow::logQso() {
   if (!log_.add(q, err)) { toast("Log failed: " + err); return; }
   gtReportQso(q);
   toast("Logged " + q.call);
-  bandMapDirty_ = true;   // dupe colouring
+  bandMapDirty_ = true;   // dupe coloring
   gtk_spin_button_spin(GTK_SPIN_BUTTON(serialSpin_), GTK_SPIN_STEP_FORWARD, 1);
   clearQsoFields();
   char cnt[32];

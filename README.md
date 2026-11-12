@@ -60,7 +60,7 @@ Features:
 - **Light / dark appearance** (follow system, light, or dark) under Preferences ==> Station.
 - **DX cluster band map**: connect to a DXSpider / AR-Cluster / CC Cluster node
   (Preferences ==> Cluster), RTTY spots fill a band map beside the main window,
-  colour-coded as new, worked or dupe from your log; click a spot to QSY and take
+  color-coded as new, worked or dupe from your log; click a spot to QSY and take
   the call. A command line sends cluster commands (filters, `sh/dx`).
 - **Callbook lookup and worked-before**: typing a complete callsign shows how
   often and when you last worked it (and fills the Name field), then queries
@@ -81,7 +81,7 @@ Features:
   heard is plotted on the GridTracker map, logged QSOs are forwarded (QSO Logged
   and ADIF messages, so GridTracker can push them to your online logs), and
   clicking a station in GridTracker fills gtty's Call field. Halt-TX and free
-  text from the other side are honoured too.
+  text from the other side are honored too.
 - **fldigi-compatible macros** on F1–F12 (`<TX> <RX> <MYCALL> <CALL> <RST> <CNTR> <LOG> …`),
   right-click a button to edit.
 - 45.45 / 50 / 75 / 100 baud, mark and space tones set directly (presets for
@@ -236,7 +236,7 @@ git). The default set uses W6IWI's "quick brown fox" beacon captured on WebSDR
 The demodulator knobs are exposed on `gtty-cli decode` for tuning:
 `--filter-bits`, `--window 0|1`, `--atc-tau`, `--bit-window`, `--afc-gain`.
 `gtty-cli decode --iq --center 1000 file.wav` treats a stereo file as I/Q baseband
-and shifts its centre to 1000 Hz, so SDR recordings can be decoded directly.
+and shifts its center to 1000 Hz, so SDR recordings can be decoded directly.
 The remaining errors on HF are concentrated in deep fades; a maximum-likelihood
 character decoder is the planned next step for those.
 

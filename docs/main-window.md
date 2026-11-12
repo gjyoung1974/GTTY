@@ -44,14 +44,14 @@ To the right of the waterfall:
 
 The **Best guess** pane spans the full width. Each character in it is decided by a confidence-weighted vote of the decoder engines. The engine panes sit side by side beneath it, one per enabled engine with its pane switched on in *Preferences → Decoders*. The two matched-filter engines have a mode dropdown (Normal, Selective, Flutter, Custom) in their pane header.
 
-Colours in the text:
+Colors in the text:
 
-| Colour | Meaning |
+| Color | Meaning |
 |---|---|
 | Blue, bold | A word that looks like a callsign |
 | Green, bold, underlined | A callsign found in the Super Check Partial file |
 | Red | Your own transmitted text, echoed into the Best guess pane |
-| Grey, small | Timestamps, when enabled |
+| Gray, small | Timestamps, when enabled |
 
 **Click a word** in any receive pane to use it:
 
@@ -64,7 +64,7 @@ Received text is kept to about 200 000 characters per pane; older text is droppe
 
 ## Transmit pane
 
-Type here. While transmitting, text is sent as you type and already-sent text turns grey. With *Word mode type-ahead* on, text is sent only after each space or Enter so a typo can still be fixed. The pane header reminds you of the keys: **Ctrl+T** transmit, **Ctrl+R** receive, **Esc** abort.
+Type here. While transmitting, text is sent as you type and already-sent text turns gray. With *Word mode type-ahead* on, text is sent only after each space or Enter so a typo can still be fixed. The pane header reminds you of the keys: **Ctrl+T** transmit, **Ctrl+R** receive, **Esc** abort.
 
 The pane is cleared when the transmitter returns to receive unless *Clear the TX pane on return to receive* is switched off in *Preferences → Transmit*.
 
@@ -109,7 +109,7 @@ Twelve buttons in two rows, tied to **F1–F12**. Click or press the key to run 
 | **Shift** | 170, 200, 425, 450 or 850 Hz |
 | **Tones** | Mark/space presets; *Custom* when the tones were set freely in Preferences |
 | **AFC** | Automatic frequency control follows the signal within the AFC range |
-| **ATC** | Automatic threshold control normalises the mark and space levels |
+| **ATC** | Automatic threshold control normalizes the mark and space levels |
 | **Rev** | Reverse: space tone below mark |
 | **Net** | Transmit on the AFC-tracked receive tones rather than the nominal ones |
 | **Auto RX** | Return to receive automatically once the transmit buffer has been empty for the configured delay |

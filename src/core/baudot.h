@@ -1,5 +1,5 @@
 // Baudot / ITA2 5-level code: encoder (ASCII -> 5-bit codes with LTRS/FIGS
-// shifts) and decoder (5-bit codes -> ASCII, honouring shift state and
+// shifts) and decoder (5-bit codes -> ASCII, honoring shift state and
 // optional unshift-on-space).
 #pragma once
 #include <cstdint>

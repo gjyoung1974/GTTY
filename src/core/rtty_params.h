@@ -5,7 +5,7 @@
 
 namespace gtty {
 
-// RTTY signalling parameters shared by modulator, demodulator and FSK keyer.
+// RTTY signaling parameters shared by modulator, demodulator and FSK keyer.
 struct RttyParams {
   double baud = 45.45;         // 45.45, 50, 75, 100 ...
   double shift = 170.0;        // Hz

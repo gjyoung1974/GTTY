@@ -31,9 +31,9 @@ Mouse actions on the waterfall:
 
 | Action | Effect |
 |---|---|
-| **Left click** | Move the tone window so its centre is at the clicked frequency |
+| **Left click** | Move the tone window so its center is at the clicked frequency |
 | **Drag inside the tone window** | Slide the window along the band |
-| **Drag elsewhere** | Drag the window centre with the pointer |
+| **Drag elsewhere** | Drag the window center with the pointer |
 | **Scroll wheel** | Nudge the tones by 10 Hz |
 | **Right click** | Retune the rig so the clicked signal lands on the nominal tones (needs a connected rig) |
 | **Middle click** | Place a notch at that frequency, or remove the notch already there |
@@ -48,7 +48,7 @@ The scope plots the filtered mark channel against the filtered space channel. A 
 
 ## AFC
 
-**AFC** (automatic frequency control) measures the frequency of the tones actually received and moves the decoder's local oscillators towards them, a fraction of the error per character. The readout under the scope shows the current offset. The maximum excursion is the **AFC range** under *Preferences → RTTY* (±60 Hz by default).
+**AFC** (automatic frequency control) measures the frequency of the tones actually received and moves the decoder's local oscillators toward them, a fraction of the error per character. The readout under the scope shows the current offset. The maximum excursion is the **AFC range** under *Preferences → RTTY* (±60 Hz by default).
 
 **Reset AFC** in the menu returns the decoders to the nominal tones. The AFC also resets whenever the tones are changed, a band button is pressed or a rig retune is made from the waterfall.
 
@@ -56,7 +56,7 @@ With **Net** ticked, the transmitter uses the AFC-tracked tones rather than the 
 
 ## ATC
 
-**ATC** (automatic threshold control) normalises the mark and space envelopes by their recent peaks before the decision between them is made. It is what keeps the decoder working through selective fading, where one tone drops while the other holds. Leave it on; the time constant can be tuned per engine in *Preferences → Decoders* (Custom mode).
+**ATC** (automatic threshold control) normalizes the mark and space envelopes by their recent peaks before the decision between them is made. It is what keeps the decoder working through selective fading, where one tone drops while the other holds. Leave it on; the time constant can be tuned per engine in *Preferences → Decoders* (Custom mode).
 
 ## Squelch
 
@@ -64,7 +64,7 @@ The **Squelch** slider mutes decoder output while the signal quality is below th
 
 ## Notches
 
-Up to four notch filters can be placed on the waterfall with a middle click; they are drawn as marks on the display and removed with another middle click or with **Clear notches** in the menu. Use them on a carrier or a neighbouring signal that sits inside the receiver passband. Placing a fifth notch drops the oldest.
+Up to four notch filters can be placed on the waterfall with a middle click; they are drawn as marks on the display and removed with another middle click or with **Clear notches** in the menu. Use them on a carrier or a neighboring signal that sits inside the receiver passband. Placing a fifth notch drops the oldest.
 
 ## Rig receiver filter
 

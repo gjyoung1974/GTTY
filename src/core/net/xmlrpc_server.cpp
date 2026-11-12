@@ -205,7 +205,7 @@ std::string Value::asString() const {
   }
 }
 
-// -------------------------------------------------------------- (de)serialise
+// -------------------------------------------------------------- (de)serialize
 
 std::string base64Encode(const std::string& raw) {
   std::string o;

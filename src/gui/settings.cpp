@@ -54,7 +54,7 @@ int tonePresetIndex(double mark, double space) {
 }
 
 std::vector<BandPreset> defaultBands() {
-  // Centres of the customary RTTY segments (dial frequency, LSB/RTTY mode).
+  // Centers of the customary RTTY segments (dial frequency, LSB/RTTY mode).
   return {{"160m", 1838000},  {"80m", 3580000},   {"40m", 7040000},   {"30m", 10142000},
           {"20m", 14080000},  {"17m", 18100000},  {"15m", 21080000},  {"12m", 24920000},
           {"10m", 28080000},  {"6m", 50300000}};

@@ -54,7 +54,7 @@ struct Opts {
   bool debug = false;
   bool quiet = false;
   bool iq = false;        // treat a stereo file as I/Q baseband
-  double iqCenter = 0;    // audio frequency the baseband centre is shifted to (0 = rate/4)
+  double iqCenter = 0;    // audio frequency the baseband center is shifted to (0 = rate/4)
   std::vector<std::string> positional;
 };
 
@@ -169,12 +169,12 @@ int cmdDecode(const Opts& o) {
   double rate = 0;
   std::string err;
   if (o.iq) {
-    // Complex baseband (SDR recording): shift the centre to an audio frequency and take the real part.
+    // Complex baseband (SDR recording): shift the center to an audio frequency and take the real part.
     std::vector<float> i, q;
     if (!readIqFile(o.positional[1], i, q, rate, err)) { std::cerr << err << "\n"; return 1; }
     double fc = o.iqCenter > 0 ? o.iqCenter : rate / 4.0 + rate / 2.0;
-    // The complex baseband spans +-rate/2 around the centre: upsample so the real
-    // signal (centre + rate/2) fits comfortably below the new Nyquist frequency.
+    // The complex baseband spans +-rate/2 around the center: upsample so the real
+    // signal (center + rate/2) fits comfortably below the new Nyquist frequency.
     double outRate = std::max(rate, 2.5 * (fc + rate / 2.0));
     if (outRate > rate) {
       Resampler ri(rate, outRate, 0 /* SRC_SINC_BEST_QUALITY */), rq(rate, outRate, 0);
@@ -195,7 +195,7 @@ int cmdDecode(const Opts& o) {
       ph += inc; if (ph > 2 * M_PI) ph -= 2 * M_PI;
     }
     for (auto& v : samples) v = v / peak * 0.8f;
-    std::cerr << "I/Q input: centre shifted to " << fc << " Hz at " << rate << " Hz sample rate (tones are relative to the centre)\n";
+    std::cerr << "I/Q input: center shifted to " << fc << " Hz at " << rate << " Hz sample rate (tones are relative to the center)\n";
   } else if (!readAudioFile(o.positional[1], samples, rate, err)) { std::cerr << err << "\n"; return 1; }
   if (o.start > 0) {
     size_t s0 = std::min(samples.size(), static_cast<size_t>(o.start * rate));

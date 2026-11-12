@@ -1,5 +1,5 @@
 // RX pipeline: audio ring -> resample to the internal rate -> decoder bank
-// + spectrum analyser -> events. Runs its own DSP thread when attached to
+// + spectrum analyzer -> events. Runs its own DSP thread when attached to
 // an AudioEngine; processSamples() lets files / tests drive it directly.
 #pragma once
 #include <atomic>
@@ -76,7 +76,7 @@ class Receiver {
   std::vector<Biquad> notchFilters_;
   std::vector<std::string> pendingText_;
   std::thread thread_;
-  std::mutex mu_;  // serialises configuration changes against the DSP thread
+  std::mutex mu_;  // serializes configuration changes against the DSP thread
   std::atomic<bool> run_{false};
   std::atomic<bool> muted_{false};
   size_t samplesSinceStatus_ = 0;

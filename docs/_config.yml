@@ -20,7 +20,7 @@ aux_links:
   Releases: https://github.com/gjyoung1974/GTTY/releases
 aux_links_new_tab: true
 
-footer_content: "gtty is free software under the GPL-3.0-or-later licence. Written by WA8Q."
+footer_content: "gtty is free software under the GPL-3.0-or-later license. Written by WA8Q."
 
 callouts_level: quiet
 callouts:

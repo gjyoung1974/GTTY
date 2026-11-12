@@ -1,6 +1,6 @@
 // Classic high-performance RTTY demodulator in the MMTTY style:
 //   complex mixers at mark/space -> windowed matched filters (one bit long)
-//   -> envelope detectors -> ATC (per-tone peak normalisation) -> slicer
+//   -> envelope detectors -> ATC (per-tone peak normalization) -> slicer
 //   -> asynchronous start/stop framing with soft bit integration
 //   -> AFC from baseband frequency discriminators -> Baudot decoder.
 #pragma once

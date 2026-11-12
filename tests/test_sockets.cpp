@@ -1,7 +1,7 @@
 // Exercises the socket layer over a real loopback connection: the portability
 // shims in socket_compat.h (close-on-exec, non-blocking, SIGPIPE suppression)
 // and the XML-RPC server's accept/serve path. The rest of the XML-RPC tests
-// only cover parsing and serialisation.
+// only cover parsing and serialization.
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -118,7 +118,7 @@ int main() {
     std::string junk(4096, 'x');
     for (int i = 0; i < 200; ++i) {
       ssize_t n = ::send(dead, junk.data(), junk.size(), net::sendFlags());
-      if (n <= 0) break;  // EPIPE/ECONNRESET reported, not signalled: what we want
+      if (n <= 0) break;  // EPIPE/ECONNRESET reported, not signaled: what we want
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     ::close(dead);
