@@ -16,6 +16,8 @@ Under *Preferences → Rig*:
 3. Enter the **Device**: the serial port, for example `/dev/ttyUSB0` on Linux or `/dev/cu.usbserial-XXXXXXXX` on macOS (`ls /dev/cu.*` lists them; use the `cu.` name, not `tty.`), or `host:port` for a NET rigctl connection (model 2, *Hamlib NET rigctl*).
 4. Set the **Serial speed** to match the rig's CAT rate menu. 0 uses the backend's default.
 5. Choose the **PTT method**: *CAT command*, *Serial DTR*, *Serial RTS* or *None (VOX)*. For DTR or RTS PTT, a different serial port can be named under **PTT serial device**; blank uses the rig device.
+
+A PTT line on a port of its own is keyed by gtty directly rather than through Hamlib. It therefore works with any rig model, including NET rigctl (where `rigctld` would otherwise decide how PTT is keyed), and with **Enable rig control** switched off. If the port cannot be opened gtty says so when it starts, and again as *PTT failed* when you transmit. Opening a serial port raises DTR and RTS for a moment before gtty releases them, so the rig may key briefly when gtty starts or the settings change.
 6. **Poll interval** sets how often frequency and mode are read (250 ms by default).
 
 When the rig answers, the header bar shows its frequency, mode and filter width. When rig control is enabled but the rig does not answer the mode label reads *rig offline* and a toast reports the Hamlib error.

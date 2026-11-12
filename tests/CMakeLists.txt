@@ -1,4 +1,4 @@
-foreach(t test_baudot test_modem test_macros test_callsign test_wsjtx test_xmlrpc test_sockets test_cluster test_callbook test_cw test_voter test_codec2 test_skimmer test_spots test_fllog)
+foreach(t test_baudot test_modem test_macros test_callsign test_wsjtx test_xmlrpc test_sockets test_cluster test_callbook test_cw test_voter test_codec2 test_skimmer test_spots test_fllog test_ptt)
   add_executable(${t} ${t}.cpp)
   target_link_libraries(${t} PRIVATE gttycore)
   add_test(NAME ${t} COMMAND ${t})

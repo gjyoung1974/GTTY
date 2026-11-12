@@ -14,6 +14,7 @@ add_library(gttycore STATIC
   audio/wav_file.cpp
   rig/rig_control.cpp
   rig/fsk_keyer.cpp
+  rig/serial_ptt.cpp
   log/logbook.cpp
   log/adif.cpp
   log/callsign.cpp

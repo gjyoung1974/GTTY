@@ -84,7 +84,10 @@ std::optional<char> BaudotDecoder::decode(uint8_t code) {
   }
   const char* table = figures_ ? baudot::figuresTable(variant_) : kLetters;
   char c = table[code];
-  if (c == '\0' || c == '\x05') return std::nullopt;
+  // BELL and WRU are functions of a teleprinter, not characters: nothing to print. Noise
+  // decodes to them as often as to any figure, and a BEL in the text shows as a box in the
+  // receive panes and rings the terminal of a logger that reads it over XML-RPC.
+  if (c == '\0' || c == '\x05' || c == '\a') return std::nullopt;
   return c;
 }
 

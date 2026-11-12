@@ -757,8 +757,10 @@ void MainWindow::openRig() {
   rig_.close();
   rigState_ = RigState{};
   updateFreqDisplay(rigState_);
-  if (!settings_.rig.enabled) return;
   std::string err;
+  // A PTT line on its own serial port is keyed whether or not rig control is on, or works.
+  if (!rig_.openPttPort(settings_.rig, err)) toast("PTT port " + err);
+  if (!settings_.rig.enabled) return;
   if (!rig_.open(settings_.rig, err)) { toast("Rig: " + err); updateRigControls(); return; }
   rigHasIfShift_ = rig_.hasIfShift();
   if (settings_.rigFilterHz > 0 && !rig_.setWidth(settings_.rigFilterHz)) toast("Rig filter: " + rig_.state().error);

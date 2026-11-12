@@ -53,7 +53,8 @@ class BaudotDecoder {
   void setVariant(BaudotVariant v) { variant_ = v; }
   void setUnshiftOnSpace(bool on) { uos_ = on; }
 
-  // Returns the decoded character, or nullopt for shift codes / blank.
+  // Returns the decoded character: printable ASCII, '\n' or '\r'. nullopt for the
+  // codes that print nothing: the shifts, blank, BELL and WRU.
   std::optional<char> decode(uint8_t code);
   void reset() { figures_ = false; }
   bool inFigures() const { return figures_; }

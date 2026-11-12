@@ -46,5 +46,30 @@ int main() {
   CHECK_EQ(*us.decode(0x09), '$');
   CHECK_EQ(*ita.decode(0x11), '+');
   CHECK_EQ(*us.decode(0x11), '"');
+
+  // Whatever arrives, noise included, only printable characters and line ends come out:
+  // every code, in both shifts, in both variants.
+  for (BaudotVariant v : {BaudotVariant::ITA2, BaudotVariant::USTTY}) {
+    for (uint8_t shift : {baudot::LTRS, baudot::FIGS}) {
+      for (int code = 0; code < 32; ++code) {
+        BaudotDecoder d(v);
+        d.decode(shift);
+        auto ch = d.decode(static_cast<uint8_t>(code));
+        if (!ch) continue;
+        CHECK((*ch >= 0x20 && *ch < 0x7f) || *ch == '\n' || *ch == '\r');
+      }
+    }
+  }
+  // BELL (FIGS J in ITA2, FIGS S in US-TTY) and WRU (FIGS D in ITA2) print nothing
+  // and leave the shift as it was.
+  BaudotDecoder bell(BaudotVariant::ITA2);
+  bell.decode(baudot::FIGS);
+  CHECK(!bell.decode(0x0b));
+  CHECK(!bell.decode(0x09));
+  CHECK_EQ(*bell.decode(0x17), '1');
+  BaudotDecoder bellUs(BaudotVariant::USTTY);
+  bellUs.decode(baudot::FIGS);
+  CHECK(!bellUs.decode(0x05));
+  CHECK_EQ(*bellUs.decode(0x0b), '\'');
   TEST_MAIN_END();
 }

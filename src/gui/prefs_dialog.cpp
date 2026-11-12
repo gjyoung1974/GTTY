@@ -259,7 +259,7 @@ void showPrefsDialog(GtkWidget* parent, Settings& s, std::function<void()> onApp
     int pttSel = 0;
     for (int i = 0; i < 4; ++i) if (s.rig.pttType == ptts[i]) pttSel = i;
     pr->pttType = combo(g2, "PTT method", {"CAT command", "Serial DTR", "Serial RTS", "None (VOX)"}, pttSel);
-    pr->pttDevice = entry(g2, "PTT serial device (blank = rig device)", s.rig.pttDevice);
+    pr->pttDevice = entry(g2, "PTT serial device (blank = rig device; a port of its own also works with NET rigctl)", s.rig.pttDevice);
     pr->pollMs = spin(g2, "Poll interval (ms)", 100, 5000, 50, s.rig.pollMs);
     GtkWidget* gf = group(pg, "Receiver filter");
     pr->rigFilter = spin(gf, "Filter width to select on connect (Hz, 0 = leave)", 0, 6000, 50, s.rigFilterHz);

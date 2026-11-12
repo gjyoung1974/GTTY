@@ -7,6 +7,8 @@
 #include <thread>
 #include <vector>
 
+#include "core/rig/serial_ptt.h"
+
 struct s_rig;
 
 namespace gtty {
@@ -24,6 +26,12 @@ struct RigConfig {
   std::string pttType = "RIG";   // RIG, DTR, RTS, NONE
   std::string pttDevice;         // serial device for DTR/RTS PTT (empty = rig device)
   int pollMs = 250;
+
+  // DTR/RTS PTT on a port other than the rig's: gtty keys that line itself (SerialPtt),
+  // whatever the rig backend is and whether or not the rig is connected.
+  bool pttOnOwnPort() const {
+    return (pttType == "DTR" || pttType == "RTS") && !pttDevice.empty() && pttDevice != device;
+  }
 };
 
 struct RigState {
@@ -45,8 +53,14 @@ class RigControl {
   static std::vector<RigModelInfo> listModels();
 
   bool open(const RigConfig& cfg, std::string& err);
-  void close();
+  // Opens the PTT port when cfg.pttOnOwnPort(); otherwise does nothing and returns true.
+  // Independent of open(): the line can be keyed with rig control off or failed.
+  bool openPttPort(const RigConfig& cfg, std::string& err);
+  void close();   // the rig and the PTT port
   bool isOpen() const { return rig_ != nullptr; }
+  // True when PTT is this object's to key: a PTT port is configured (setPtt() fails with
+  // the reason if it could not be opened), or else the rig is open.
+  bool canPtt() const { return ownPttPort_ || rig_ != nullptr; }
   const RigConfig& config() const { return cfg_; }
 
   RigState state() const;
@@ -70,7 +84,12 @@ class RigControl {
   void pollLoop();
   void setError(const std::string& e);
 
+  void closeRig();
+
   s_rig* rig_ = nullptr;
+  SerialPtt pttPort_;
+  bool ownPttPort_ = false;      // PTT is on pttPort_ (open or not), never on the rig
+  std::string pttPortError_;
   RigConfig cfg_;
   mutable std::mutex mu_;      // guards rig_ calls and state_
   RigState state_;

@@ -81,7 +81,7 @@ void Transmitter::sendText(const std::string& text) {
 }
 
 void Transmitter::setPtt(bool on) {
-  if (cfg_.pttViaRig && rig_ && rig_->isOpen()) {
+  if (cfg_.pttViaRig && rig_ && rig_->canPtt()) {
     if (!rig_->setPtt(on) && events_) events_->push(MessageEvent{"PTT failed: " + rig_->state().error, true});
   }
   if (events_) events_->push(PttEvent{on});
@@ -175,7 +175,7 @@ void Transmitter::beginCwId() {
     cwKeyDone_ = false;
     if (cwThread_.joinable()) cwThread_.join();
     cwThread_ = std::thread([this, el] {
-      bool viaRig = cfg_.pttViaRig && rig_ && rig_->isOpen();
+      bool viaRig = cfg_.pttViaRig && rig_ && rig_->canPtt();
       for (const auto& e : el) {
         if (!cwActive_) break;
         if (viaRig) rig_->setPtt(e.on);

@@ -40,8 +40,19 @@ void RigControl::setError(const std::string& e) {
   state_.error = one;
 }
 
+bool RigControl::openPttPort(const RigConfig& cfg, std::string& err) {
+  std::lock_guard<std::mutex> lk(mu_);
+  pttPort_.close();
+  pttPortError_.clear();
+  ownPttPort_ = cfg.pttOnOwnPort();
+  if (!ownPttPort_) return true;
+  if (pttPort_.open(cfg.pttDevice, cfg.pttType == "RTS" ? SerialPtt::Line::Rts : SerialPtt::Line::Dtr, err)) return true;
+  pttPortError_ = err;
+  return false;
+}
+
 bool RigControl::open(const RigConfig& cfg, std::string& err) {
-  close();
+  closeRig();
   cfg_ = cfg;
   RIG* rig = rig_init(static_cast<rig_model_t>(cfg.model));
   if (!rig) { err = "rig_init failed: unknown model " + std::to_string(cfg.model); return false; }
@@ -55,9 +66,10 @@ bool RigControl::open(const RigConfig& cfg, std::string& err) {
   if (cfg.baud > 0) setConf("serial_speed", std::to_string(cfg.baud));
   std::string ptt = cfg.pttType;
   for (auto& c : ptt) c = static_cast<char>(toupper(static_cast<unsigned char>(c)));
-  if (ptt == "NONE") ptt = "None";
+  // A PTT line on its own port is keyed by pttPort_, not by Hamlib: keep Hamlib off that port.
+  if (ptt == "NONE" || cfg.pttOnOwnPort()) ptt = "None";
   setConf("ptt_type", ptt);
-  if (ptt == "DTR" || ptt == "RTS") setConf("ptt_pathname", cfg.pttDevice.empty() ? cfg.device : cfg.pttDevice);
+  if (ptt == "DTR" || ptt == "RTS") setConf("ptt_pathname", cfg.device);
 
   int rc = rig_open(rig);
   if (rc != RIG_OK) {
@@ -77,6 +89,13 @@ bool RigControl::open(const RigConfig& cfg, std::string& err) {
 }
 
 void RigControl::close() {
+  closeRig();
+  std::lock_guard<std::mutex> lk(mu_);
+  pttPort_.close();
+  ownPttPort_ = false;
+}
+
+void RigControl::closeRig() {
   run_ = false;
   if (poller_.joinable()) poller_.join();
   std::lock_guard<std::mutex> lk(mu_);
@@ -110,7 +129,8 @@ void RigControl::pollLoop() {
           state_.widthHz = static_cast<int>(w);
         }
         ptt_t p = RIG_PTT_OFF;
-        if (rig_get_ptt(rig_, RIG_VFO_CURR, &p) == RIG_OK) state_.ptt = p != RIG_PTT_OFF;
+        if (pttPort_.isOpen()) state_.ptt = pttPort_.get();
+        else if (rig_get_ptt(rig_, RIG_VFO_CURR, &p) == RIG_OK) state_.ptt = p != RIG_PTT_OFF;
       }
       snapshot = state_;
     }
@@ -140,6 +160,14 @@ bool RigControl::setMode(const std::string& mode, int widthHz) {
 
 bool RigControl::setPtt(bool on) {
   std::lock_guard<std::mutex> lk(mu_);
+  if (ownPttPort_) {
+    // Never fall back to the rig: with NET rigctl that would key through whatever
+    // rigctld was started with, which is not what was asked for.
+    std::string e = pttPortError_;
+    bool ok = pttPort_.isOpen() && pttPort_.set(on, &e);
+    if (ok) state_.ptt = on; else setError(e);
+    return ok;
+  }
   if (!rig_) return false;
   int rc = rig_set_ptt(rig_, RIG_VFO_CURR, on ? RIG_PTT_ON : RIG_PTT_OFF);
   if (rc == RIG_OK) state_.ptt = on; else setError(rigerror2(rc));
