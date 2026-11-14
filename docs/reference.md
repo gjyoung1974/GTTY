@@ -58,7 +58,7 @@ nav_order: 16
 | **Audio** | Input and output device, input channel |
 | **Rig** | Hamlib model, device, speed; PTT method and device, poll interval; filter width on connect; dial frequency without rig |
 | **RTTY** | Baud, tone preset, mark and space tones, follow the rig's sideband, stop bits; character set, unshift on space; AFC range, Net |
-| **Decoders** | Per engine: enabled, pane, vote, mode and custom values; best-guess pane; Skimmer and channel step |
+| **Decoders** | Per engine: enabled, pane, vote, mode and custom values; best-guess pane; Skimmer and channel step; the radio's built-in decoder (serial device and speed) |
 | **Transmit** | Keying method, FSK device and polarity, diddle, word mode, AFSK level; PTT through rig, rig mode on TX, LTRS preamble, PTT lead; Auto RX and delay, clear TX pane; Auto CQ interval and macro; TX monitor level; CW ID; Tune time-out |
 | **Station** | Callsign, name, QTH, grid; logbook and SCP paths; waterfall range and direction; font size; timestamps; session file; appearance |
 | **Cluster** | Host, port, login, commands; RTTY only, this band, maximum age |

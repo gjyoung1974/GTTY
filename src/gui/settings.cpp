@@ -291,6 +291,9 @@ bool Settings::loadFrom(const std::string& path) {
   showVotePane = boolean(kf, "decoders", "show_vote", showVotePane);
   skimmerEnabled = boolean(kf, "decoders", "skimmer", skimmerEnabled);
   skimmerStepHz = dbl(kf, "decoders", "skimmer_step", skimmerStepHz);
+  radioDecoderEnabled = boolean(kf, "decoders", "radio", radioDecoderEnabled);
+  radioDecoderDevice = str(kf, "decoders", "radio_device", radioDecoderDevice);
+  radioDecoderBaud = integer(kf, "decoders", "radio_baud", radioDecoderBaud);
 
   tx.method = static_cast<TxConfig::Method>(integer(kf, "tx", "method", static_cast<int>(tx.method)));
   tx.fskDevice = str(kf, "tx", "fsk_device", tx.fskDevice);
@@ -418,6 +421,9 @@ bool Settings::saveTo(const std::string& path) const {
   g_key_file_set_boolean(kf, "decoders", "show_vote", showVotePane);
   g_key_file_set_boolean(kf, "decoders", "skimmer", skimmerEnabled);
   g_key_file_set_double(kf, "decoders", "skimmer_step", skimmerStepHz);
+  g_key_file_set_boolean(kf, "decoders", "radio", radioDecoderEnabled);
+  g_key_file_set_string(kf, "decoders", "radio_device", radioDecoderDevice.c_str());
+  g_key_file_set_integer(kf, "decoders", "radio_baud", radioDecoderBaud);
 
   g_key_file_set_integer(kf, "tx", "method", static_cast<int>(tx.method));
   g_key_file_set_string(kf, "tx", "fsk_device", tx.fskDevice.c_str());

@@ -1,5 +1,6 @@
 #include "prefs_dialog.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <memory>
 #include <string>
@@ -14,6 +15,9 @@ namespace gtty {
 
 namespace {
 
+const int kRadioDecoderBauds[] = {1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200};
+const int kRadioDecoderBaudCount = 8;
+
 struct Prefs {
   Settings* s;
   std::function<void()> onApply;
@@ -26,7 +30,7 @@ struct Prefs {
   GtkWidget *cbProvider, *cbUser, *cbPass, *cbAutoFill;
   struct DecRows { GtkWidget *enabled = nullptr, *show = nullptr, *votes = nullptr, *mode = nullptr, *filterBits = nullptr, *window = nullptr, *atcTau = nullptr; };
   std::vector<DecRows> dec;
-  GtkWidget *showVote, *skimmer, *skimmerStep;
+  GtkWidget *showVote, *skimmer, *skimmerStep, *radioDec, *radioDecDevice, *radioDecBaud;
   GtkWidget *baud, *mark, *space, *preset, *stopBits, *variant, *uos, *afcRange, *netTx, *followSideband;
   bool applyingPreset = false;
   GtkWidget *txMethod, *fskDevice, *fskInvert, *diddle, *afskLevel, *pttViaRig, *txMode, *preamble, *pttLead;
@@ -148,6 +152,9 @@ void onClosed(AdwDialog*, gpointer p) {
   s.showVotePane = active(pr->showVote);
   s.skimmerEnabled = active(pr->skimmer);
   s.skimmerStepHz = value(pr->skimmerStep);
+  s.radioDecoderEnabled = active(pr->radioDec);
+  s.radioDecoderDevice = text(pr->radioDecDevice);
+  s.radioDecoderBaud = kRadioDecoderBauds[std::clamp(selected(pr->radioDecBaud), 0, kRadioDecoderBaudCount - 1)];
 
   s.rtty.baud = value(pr->baud);
   s.rtty.setTones(value(pr->mark), value(pr->space));
@@ -339,6 +346,17 @@ void showPrefsDialog(GtkWidget* parent, Settings& s, std::function<void()> onApp
     pr->skimmer = toggle(gs, "Decode the whole passband", s.skimmerEnabled,
                          "A decoder every step across the waterfall range; stations appear in the Skimmer list of the sidebar. Uses CPU");
     pr->skimmerStep = spin(gs, "Channel step (Hz)", 20, 200, 10, s.skimmerStepHz);
+    GtkWidget* gr = group(pg, "Radio's built-in decoder");
+    pr->radioDec = toggle(gr, "Show what the radio decodes", s.radioDecoderEnabled,
+                          "For radios that print their own RTTY decoder on a serial port, such as the second USB port of an Icom IC-7610 or IC-9700 set to RTTY Decode. It gets a pane of its own and does not take part in the best-guess vote");
+    pr->radioDecDevice = entry(gr, "Serial device the radio prints on (may be the FSK or PTT port)", s.radioDecoderDevice);
+    std::vector<std::string> bauds;
+    int baudSel = 3;
+    for (int i = 0; i < kRadioDecoderBaudCount; ++i) {
+      bauds.push_back(std::to_string(kRadioDecoderBauds[i]));
+      if (kRadioDecoderBauds[i] == s.radioDecoderBaud) baudSel = i;
+    }
+    pr->radioDecBaud = combo(gr, "Serial speed (the radio's Decode Baud Rate)", bauds, baudSel);
   }
   // --- Transmit
   {
