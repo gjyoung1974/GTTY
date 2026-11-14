@@ -74,6 +74,34 @@ A contest logger can show the same stations in its own band map: see [Skimmer sp
 {: .tip }
 With a wide receiver filter (2.4 kHz or more) and the Skimmer on, you can see the whole RTTY segment at once and work stations by clicking them, which is how a contest run on search-and-pounce goes fastest.
 
+## The radio's built-in decoder
+
+Some radios print what their own RTTY decoder reads as plain text on a serial port. gtty can show that text in a pane of its own, **Radio**, next to the engines. Turn it on under *Preferences → Decoders → Radio's built-in decoder*:
+
+| Setting | Meaning |
+|---|---|
+| **Show what the radio decodes** | Opens the port and shows the Radio pane |
+| **Serial device** | The port the radio prints on, for example `/dev/ttyUSB1`. Not the CAT port |
+| **Serial speed** | Must match the radio's *Decode Baud Rate* (9600 by default here) |
+
+On the radio:
+
+- **Icom IC-7610, IC-9700:** the USB cable carries two serial ports. Set *USB (B) Function* to **RTTY Decode** and note the *Decode Baud Rate*. The first port stays free for CI-V.
+- **Icom IC-7300:** there is one serial port, which carries either CI-V or the decoder (*USB Serial Function*). With the decoder on it, rig control needs the CI-V jack.
+- The radio's RTTY decoder must be running (the DECODE screen), in RTTY mode.
+
+The port may be the one whose DTR or RTS line keys FSK or PTT: gtty reads it and keys it at the same time. It cannot be the port used for **UART** FSK, nor the rig control port.
+
+What to expect:
+
+- The Radio pane gets the same callsign, CQ and report highlighting as the others, and a click picks a word from it.
+- The radio's text does **not** take part in the best-guess vote: it arrives without timing or confidence, so it cannot be aligned with the engines character by character. Loggers, GridTracker and the session file still read the Best guess.
+- While gtty transmits, what the radio prints is dropped; the pane shows gtty's own echo of the transmission, like the others.
+- Yaesu radios, the FT-710 among them, show their decoder on the screen only and do not print it on a serial port, as far as is known.
+
+{: .note }
+This was written from a description of the Icom ports and tested against a simulated port only. Reports from a real radio are welcome in [issue 15](https://github.com/gjyoung1974/GTTY/issues/15).
+
 ## Other decoder settings
 
 *Preferences → RTTY* also holds:

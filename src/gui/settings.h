@@ -87,6 +87,10 @@ struct Settings {
   bool showVotePane = true;   // merged best-guess pane
   bool skimmerEnabled = false;
   double skimmerStepHz = 50;  // channel spacing across the waterfall range
+  // The radio's built-in decoder, read from the serial port it prints on (Icom "RTTY Decode")
+  bool radioDecoderEnabled = false;
+  std::string radioDecoderDevice;
+  int radioDecoderBaud = 9600;
   // tx
   TxConfig tx;
   bool autoRx = false;          // return to receive when the TX buffer has been empty for autoRxDelaySec

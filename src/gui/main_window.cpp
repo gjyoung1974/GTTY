@@ -60,6 +60,7 @@ MainWindow::MainWindow(AdwApplication* app)
   if (!settings_.scpPath.empty() && scp_.load(settings_.scpPath, err))
     toast("Loaded " + std::to_string(scp_.size()) + " calls from MASTER.SCP");
 
+  openRadioDecoder();   // before the keyer and the PTT port: see RigDecodePort
   openAudio();
   openRig();
   openGridTracker();
@@ -87,6 +88,7 @@ MainWindow::~MainWindow() {
   if (gt_.isOpen()) gt_.send(wsjtx::encodeClose(gt_.id()));
   tx_.abortTx();
   rx_.stop();
+  radioDecoder_.close();
   rig_.close();
   engine_.closeInput();
   engine_.closeOutput();
@@ -293,7 +295,7 @@ GtkWidget* MainWindow::buildScopeColumn() {
 GtkWidget* MainWindow::buildRxPanes() {
   GtkWidget* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
   size_t engines = rx_.bank().size();
-  size_t n = engines + 1;   // + the merged best-guess slot
+  size_t n = engines + 2;   // + the merged best-guess slot and the radio's own decoder
   rxViews_.resize(n); rxBufs_.resize(n); rxEndMarks_.resize(n); rxWord_.resize(n);
   callTags_.resize(n); scpTags_.resize(n); echoTags_.resize(n); timeTags_.resize(n);
   myCallTags_.resize(n); cqTags_.resize(n); reportTags_.resize(n); exchangeTags_.resize(n);
@@ -309,6 +311,7 @@ GtkWidget* MainWindow::buildRxPanes() {
   gtk_widget_set_vexpand(engineRow, TRUE);
   std::vector<size_t> order{static_cast<size_t>(rx_.voteSlot())};
   for (size_t i = 0; i < engines; ++i) order.push_back(i);
+  order.push_back(static_cast<size_t>(radioSlot()));
   for (size_t i : order) {
     bool isVotePane = i == static_cast<size_t>(rx_.voteSlot());
     GtkWidget* pane = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -319,14 +322,15 @@ GtkWidget* MainWindow::buildRxPanes() {
     else gtk_box_append(GTK_BOX(engineRow), pane);
     GtkWidget* head = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
     bool isVote = i == static_cast<size_t>(rx_.voteSlot());
-    std::string title = isVote ? "Best guess (vote of the engines)" : rx_.bank().slot(i).label;
+    bool isRadio = i == static_cast<size_t>(radioSlot());
+    std::string title = isVote ? "Best guess (vote of the engines)" : isRadio ? "Radio (its built-in decoder)" : rx_.bank().slot(i).label;
     GtkWidget* label = gtk_label_new(title.c_str());
     gtk_widget_add_css_class(label, "caption");
     gtk_widget_add_css_class(label, "dim-label");
     gtk_label_set_xalign(GTK_LABEL(label), 0.f);
     gtk_widget_set_hexpand(label, TRUE);
     gtk_box_append(GTK_BOX(head), label);
-    if (!isVote && i < 2) {
+    if (!isVote && !isRadio && i < 2) {
       static const char* modes[] = {"Normal", "Selective", "Flutter", "Custom", nullptr};
       GtkWidget* drop = gtk_drop_down_new_from_strings(modes);
       gtk_widget_add_css_class(drop, "flat");
@@ -798,6 +802,28 @@ void MainWindow::openAudio() {
   if (!tx_.configure(txc, activeRtty(), txErr)) toast("TX: " + txErr);
 }
 
+void MainWindow::openRadioDecoder() {
+  radioDecoder_.close();
+  if (!settings_.radioDecoderEnabled) return;
+  const std::string& dev = settings_.radioDecoderDevice;
+  if (dev.empty()) { toast("Radio decoder: no serial device set (Preferences → Decoders)"); return; }
+  // UART FSK sends 5-bit characters at the RTTY speed from this port; it cannot also
+  // be read at the radio's decode speed. Keying on DTR or RTS shares the port happily.
+  if (settings_.tx.method == TxConfig::Method::FskUart && settings_.tx.fskDevice == dev) {
+    toast("Radio decoder: " + dev + " is the UART FSK port and cannot be read as well; key FSK on DTR or RTS to share it");
+    return;
+  }
+  if (settings_.rig.enabled && settings_.rig.device == dev) {
+    toast("Radio decoder: " + dev + " is the rig control port; the radio prints its decoder on another one");
+    return;
+  }
+  int slot = radioSlot();
+  radioDecoder_.onText = [this, slot](const std::string& text) { events_.push(RxTextEvent{slot, text}); };
+  radioDecoder_.onError = [this](const std::string& why) { events_.push(MessageEvent{"Radio decoder " + why, true}); };
+  std::string err;
+  if (!radioDecoder_.open(dev, settings_.radioDecoderBaud, err)) toast("Radio decoder " + err);
+}
+
 void MainWindow::openRig() {
   rig_.close();
   rigState_ = RigState{};
@@ -998,6 +1024,7 @@ void MainWindow::handle(const Event& e) {
     gtk_widget_remove_css_class(pttLabel_, ptt->on ? "ptt-rx" : "ptt-tx");
     gtk_widget_add_css_class(pttLabel_, ptt->on ? "ptt-tx" : "ptt-rx");
     rx_.setMuted(ptt->on);
+    radioDecoder_.setMuted(ptt->on);
   } else if (auto* echo = std::get_if<TxEchoEvent>(&e)) {
     txSentAny_ = true;
     appendEcho(echo->text);
@@ -1532,6 +1559,7 @@ void MainWindow::applySettings() {
     updateDupe();
   }
   if (!settings_.scpPath.empty()) scp_.load(settings_.scpPath, err);
+  openRadioDecoder();   // before the keyer and the PTT port: see RigDecodePort
   openAudio();
   openRig();
   openGridTracker();
@@ -1798,6 +1826,7 @@ void MainWindow::applyDecoderSettings() {
     if (rxPanes_[i]) gtk_widget_set_visible(rxPanes_[i], d.enabled && d.show);
   }
   if (rxPanes_[rx_.voteSlot()]) gtk_widget_set_visible(rxPanes_[rx_.voteSlot()], settings_.showVotePane);
+  if (rxPanes_[radioSlot()]) gtk_widget_set_visible(rxPanes_[radioSlot()], settings_.radioDecoderEnabled);
   rx_.setSkimmer(settings_.skimmerEnabled, settings_.waterfallLoHz, settings_.waterfallHiHz, settings_.skimmerStepHz);
   if (skimmerAction_) g_simple_action_set_state(skimmerAction_, g_variant_new_boolean(settings_.skimmerEnabled));
   if (!settings_.skimmerEnabled) { skim_.clear(); skimDirty_ = true; }

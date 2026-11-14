@@ -24,6 +24,7 @@
 #include <fstream>
 #include "core/receiver.h"
 #include "core/rig/rig_control.h"
+#include "core/rig/rig_decode_port.h"
 #include "core/transmitter.h"
 #include "settings.h"
 #include "waterfall.h"
@@ -58,6 +59,9 @@ class MainWindow {
   // runtime
   void openAudio();
   void openRig();
+  void openRadioDecoder();
+  // The radio's built-in decoder has the text slot after the engines and the vote.
+  int radioSlot() const { return rx_.voteSlot() + 1; }
   void applyRttyParams(bool resetAfc);
   void syncControlsFromSettings();
   void poll();
@@ -194,6 +198,7 @@ class MainWindow {
   EventQueue events_;
   AudioEngine engine_;
   RigControl rig_;
+  RigDecodePort radioDecoder_;
   Receiver rx_;
   Transmitter tx_;
   Logbook log_;
@@ -238,7 +243,7 @@ class MainWindow {
   GtkWidget* sideStack_ = nullptr;
   GtkWidget* skimList_ = nullptr;
   GtkWidget* skimStatus_ = nullptr;
-  std::vector<GtkWidget*> rxPanes_;          // per text slot (engines, then the vote slot)
+  std::vector<GtkWidget*> rxPanes_;          // per text slot (engines, the vote slot, the radio's decoder)
   std::vector<GtkWidget*> modeDrops_;        // per bank slot; null where the engine has no modes
   GtkWidget* bandMapBox_ = nullptr;
   bool modemSidebar_ = false;    // sidebar opened by hand while in the modem-only view (not saved)
