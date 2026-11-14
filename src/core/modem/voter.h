@@ -25,6 +25,10 @@ class Voter {
 
   std::function<void(char)> onChar;
   std::function<void(uint8_t code, float confidence, int agree, int total)> onCode;
+  // How sure the engines were of the character just decided, 0..1: the confidence of
+  // those that agreed on it, averaged over all that may vote. Unlike the share of the
+  // vote above it stays low on noise, where engines disagree or stay silent.
+  float lastStrength() const { return strength_; }
 
  private:
   struct Group {
@@ -40,6 +44,7 @@ class Voter {
   uint64_t hold_ = 0;
   std::deque<Group> groups_;
   BaudotDecoder baudot_;
+  float strength_ = 0;
 };
 
 }  // namespace gtty

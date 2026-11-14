@@ -9,7 +9,7 @@ RTTY is sent as two audio tones, mark and space, 170 Hz apart in the usual amate
 
 ## Tones, shift and polarity
 
-The tone pair is set by the **Tones** preset in the control row, or directly under *Preferences → RTTY* with the **Mark tone** and **Space tone** fields. Shift and polarity follow from the two tones: with space above mark the signal is "normal"; with space below mark it is "reversed", shown by the **Rev** box in the control row.
+The tone pair is set by the **Tones** preset behind the **⋮** button in the control row, or directly under *Preferences → RTTY* with the **Mark tone** and **Space tone** fields. Shift and polarity follow from the two tones: with space above mark the signal is "normal"; with space below mark it is "reversed", shown by the **Rev** box in the control row.
 
 Presets:
 
@@ -21,7 +21,7 @@ Presets:
 | 1275 / 1105 (low, reversed) | low tones, reversed |
 | 2125 / 2975 (850 Hz shift) | wide shift, used by some utility stations |
 
-The **Shift** dropdown offers 170, 200, 425, 450 and 850 Hz and keeps the mark tone. **Baud** offers 45.45 (amateur standard), 50, 75 and 100.
+The **Shift** dropdown, behind the **⋮** button in the control row, offers 170, 200, 425, 450 and 850 Hz and keeps the mark tone. **Baud** offers 45.45 (amateur standard), 50, 75 and 100.
 
 Whether you need **Rev** depends on the rig's sideband. In RTTY-L or LSB with the default tones leave it unticked; in USB or an upper-sideband data mode tick it. If a strong, well tuned signal prints garbage, Rev is the first thing to try.
 

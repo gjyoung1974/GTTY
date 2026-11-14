@@ -50,8 +50,16 @@ Colors in the text:
 |---|---|
 | Blue, bold | A word that looks like a callsign |
 | Green, bold, underlined | A callsign found in the Super Check Partial file |
-| Red | Your own transmitted text, echoed into the Best guess pane |
+| Bold on yellow | Your own callsign (*Preferences → Station*), also with other characters stuck to it |
+| Purple, bold | `CQ` |
+| Orange | The signal report, `599` or `5NN` |
+| Orange, bold | The exchange: up to three short words after the report on the same line |
+| Red | Your own transmitted text, echoed into every receive pane |
 | Gray, small | Timestamps, when enabled |
+
+A callsign run together with other characters (`QRZDL1ABCK`, noise glued to a call) is picked out when there is a reason to expect it: it is your own, it is the one in the **Call** field, or it is in the Super Check Partial file and at least four characters long. Clicking such a word takes the callsign without the rest.
+
+When a station stops sending, the decoders go on printing what the band noise spells. A space is put between the last character of the transmission and that noise, so the last word, often a callsign or the exchange, stays whole.
 
 **Click a word** in any receive pane to use it:
 
@@ -99,6 +107,8 @@ Twelve buttons in two rows, tied to **F1–F12**. Click or press the key to run 
 
 ## Control row
 
+The controls sit in one row when the window is wide enough and wrap onto further lines when it is not.
+
 | Control | Meaning |
 |---|---|
 | **TX** | Toggle the transmitter (**Ctrl+T** / **Ctrl+R**) |
@@ -106,14 +116,13 @@ Twelve buttons in two rows, tied to **F1–F12**. Click or press the key to run 
 | **Abort** | Drop PTT immediately and discard unsent text (**Esc**) |
 | **Clear text** | Clear the receive and transmit panes (**Ctrl+K**) |
 | **Baud** | 45.45, 50, 75 or 100 baud |
-| **Shift** | 170, 200, 425, 450 or 850 Hz |
-| **Tones** | Mark/space presets; *Custom* when the tones were set freely in Preferences |
+| **⋮** | Opens **Shift** (170, 200, 425, 450 or 850 Hz) and **Tones** (mark/space presets; *Custom* when the tones were set freely in Preferences) |
 | **AFC** | Automatic frequency control follows the signal within the AFC range |
 | **ATC** | Automatic threshold control normalizes the mark and space levels |
 | **Rev** | Reverse: space tone below mark |
 | **Net** | Transmit on the AFC-tracked receive tones rather than the nominal ones |
 | **Auto RX** | Return to receive automatically once the transmit buffer has been empty for the configured delay |
-| **Auto CQ** | Repeat the CQ macro with a pause between calls until a callsign is entered |
+| **Auto CQ** | Repeat the CQ macro with a pause between calls until a callsign is entered. Not shown in modem-only view, where the logger sends the CQs |
 | **Squelch** | Mutes decoder output below this quality; 0 is off |
 
 ## Status line

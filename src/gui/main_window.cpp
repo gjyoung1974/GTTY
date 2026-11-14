@@ -296,6 +296,8 @@ GtkWidget* MainWindow::buildRxPanes() {
   size_t n = engines + 1;   // + the merged best-guess slot
   rxViews_.resize(n); rxBufs_.resize(n); rxEndMarks_.resize(n); rxWord_.resize(n);
   callTags_.resize(n); scpTags_.resize(n); echoTags_.resize(n); timeTags_.resize(n);
+  myCallTags_.resize(n); cqTags_.resize(n); reportTags_.resize(n); exchangeTags_.resize(n);
+  rxHighlight_.assign(n, RxHighlighter{});
   rxLineStart_.assign(n, true);
   rxBreaks_.assign(n, LineBreaks{});
   rxPanes_.assign(n, nullptr);
@@ -349,6 +351,11 @@ GtkWidget* MainWindow::buildRxPanes() {
     rxEndMarks_[i] = gtk_text_buffer_create_mark(buf, nullptr, &end, FALSE);
     callTags_[i] = gtk_text_buffer_create_tag(buf, nullptr, "foreground", "#2a7fff", "weight", PANGO_WEIGHT_BOLD, nullptr);
     scpTags_[i] = gtk_text_buffer_create_tag(buf, nullptr, "foreground", "#1a9c3c", "weight", PANGO_WEIGHT_BOLD, "underline", PANGO_UNDERLINE_SINGLE, nullptr);
+    // The operator's own call has to catch the eye in a screen full of calls: a marker-pen background.
+    myCallTags_[i] = gtk_text_buffer_create_tag(buf, nullptr, "foreground", "#1a1a1a", "background", "#ffd84a", "weight", PANGO_WEIGHT_BOLD, nullptr);
+    cqTags_[i] = gtk_text_buffer_create_tag(buf, nullptr, "foreground", "#9141ac", "weight", PANGO_WEIGHT_BOLD, nullptr);
+    reportTags_[i] = gtk_text_buffer_create_tag(buf, nullptr, "foreground", "#c64600", nullptr);
+    exchangeTags_[i] = gtk_text_buffer_create_tag(buf, nullptr, "foreground", "#c64600", "weight", PANGO_WEIGHT_BOLD, nullptr);
     echoTags_[i] = gtk_text_buffer_create_tag(buf, nullptr, "foreground", "#d03030", nullptr);
     timeTags_[i] = gtk_text_buffer_create_tag(buf, nullptr, "foreground", "#8a8a8a", "scale", 0.85, nullptr);
     rxViews_[i] = view; rxBufs_[i] = buf;
@@ -528,7 +535,23 @@ GtkWidget* MainWindow::buildLogRow() {
 }
 
 GtkWidget* MainWindow::buildControlRow() {
-  GtkWidget* row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+  // The controls come in four groups that wrap onto further lines when the window is
+  // narrower than all of them side by side, so the row never sets the window's width.
+  GtkWidget* flow = gtk_flow_box_new();
+  gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(flow), GTK_SELECTION_NONE);
+  gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(flow), 1);
+  gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(flow), 4);
+  gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flow), 8);
+  gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flow), 2);
+  gtk_widget_add_css_class(flow, "control-row");
+  GtkWidget* row = nullptr;
+  auto group = [&] {
+    row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_widget_set_halign(row, GTK_ALIGN_START);
+    gtk_flow_box_append(GTK_FLOW_BOX(flow), row);
+    gtk_widget_set_focusable(gtk_widget_get_parent(row), FALSE);   // the GtkFlowBoxChild: keep Tab on the controls
+  };
+  group();
   txButton_ = gtk_toggle_button_new_with_label("TX");
   gtk_widget_add_css_class(txButton_, "tx-button");
   gtk_widget_set_size_request(txButton_, 90, -1);
@@ -548,16 +571,26 @@ GtkWidget* MainWindow::buildControlRow() {
   gtk_widget_set_tooltip_text(clearTextBtn, "Clear the receive and transmit text areas (Ctrl+K)");
   gtk_box_append(GTK_BOX(row), clearTextBtn);
 
-  gtk_box_append(GTK_BOX(row), gtk_separator_new(GTK_ORIENTATION_VERTICAL));
+  group();
   gtk_box_append(GTK_BOX(row), gtk_label_new("Baud"));
   baudDrop_ = gtk_drop_down_new_from_strings(kBauds);
   g_signal_connect(baudDrop_, "notify::selected", G_CALLBACK(onControlNotify), this);
   gtk_box_append(GTK_BOX(row), baudDrop_);
-  gtk_box_append(GTK_BOX(row), gtk_label_new("Shift"));
+  // Shift and tones are set once for a station and then left alone, so they sit behind
+  // a button instead of taking room in the row (they are in Preferences → RTTY as well).
+  GtkWidget* more = gtk_grid_new();
+  gtk_grid_set_row_spacing(GTK_GRID(more), 6);
+  gtk_grid_set_column_spacing(GTK_GRID(more), 8);
+  auto moreRow = [&](int r, const char* label, GtkWidget* w) {
+    GtkWidget* l = gtk_label_new(label);
+    gtk_label_set_xalign(GTK_LABEL(l), 0.f);
+    gtk_grid_attach(GTK_GRID(more), l, 0, r, 1, 1);
+    gtk_widget_set_hexpand(w, TRUE);
+    gtk_grid_attach(GTK_GRID(more), w, 1, r, 1, 1);
+  };
   shiftDrop_ = gtk_drop_down_new_from_strings(kShifts);
   g_signal_connect(shiftDrop_, "notify::selected", G_CALLBACK(onControlNotify), this);
-  gtk_box_append(GTK_BOX(row), shiftDrop_);
-  gtk_box_append(GTK_BOX(row), gtk_label_new("Tones"));
+  moreRow(0, "Shift", shiftDrop_);
   {
     std::vector<const char*> names;
     for (const auto& tp : tonePresets()) names.push_back(tp.name);
@@ -565,9 +598,17 @@ GtkWidget* MainWindow::buildControlRow() {
     tonesDrop_ = gtk_drop_down_new_from_strings(names.data());
     gtk_widget_set_tooltip_text(tonesDrop_, "Mark / space tone preset (edit freely in Preferences → RTTY)");
     g_signal_connect(tonesDrop_, "notify::selected", G_CALLBACK(onTonesNotify), this);
-    gtk_box_append(GTK_BOX(row), tonesDrop_);
+    moreRow(1, "Tones", tonesDrop_);
   }
+  GtkWidget* morePop = gtk_popover_new();
+  gtk_popover_set_child(GTK_POPOVER(morePop), more);
+  GtkWidget* moreBtn = gtk_menu_button_new();
+  gtk_menu_button_set_icon_name(GTK_MENU_BUTTON(moreBtn), "view-more-symbolic");
+  gtk_menu_button_set_popover(GTK_MENU_BUTTON(moreBtn), morePop);
+  gtk_widget_set_tooltip_text(moreBtn, "Shift and tones");
+  gtk_box_append(GTK_BOX(row), moreBtn);
 
+  group();
   auto check = [&](const char* label, const char* tip) {
     GtkWidget* c = gtk_check_button_new_with_label(label);
     gtk_widget_set_tooltip_text(c, tip);
@@ -589,13 +630,14 @@ GtkWidget* MainWindow::buildControlRow() {
   }), this);
   gtk_box_append(GTK_BOX(row), autoCqCheck_);
 
+  group();
   gtk_box_append(GTK_BOX(row), gtk_label_new("Squelch"));
   squelchScale_ = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, 1, 0.02);
   gtk_widget_set_size_request(squelchScale_, 140, -1);
   gtk_scale_set_draw_value(GTK_SCALE(squelchScale_), FALSE);
   g_signal_connect(squelchScale_, "value-changed", G_CALLBACK(onControlChanged), this);
   gtk_box_append(GTK_BOX(row), squelchScale_);
-  return row;
+  return flow;
 }
 
 GtkWidget* MainWindow::buildStatusBar() {
@@ -688,6 +730,7 @@ void MainWindow::applyCss() {
            ".dupe-label { color: #d02020; font-weight: bold; }"
            ".call-entry { font-weight: bold; text-transform: uppercase; }"
            ".band-button { padding: 2px 4px; min-width: 36px; }"
+           ".control-row > flowboxchild { padding: 0; }"
            ".band-active { background: @accent_bg_color; color: @accent_fg_color; font-weight: bold; }"
            ".tune-button:checked { background: #e0a000; color: black; }"
            ".spot-freq { font-family: monospace; }"
@@ -998,10 +1041,19 @@ void MainWindow::updateFreqDisplay(const RigState& s) {
   }
 }
 
+RxHighlightContext MainWindow::highlightContext() const {
+  RxHighlightContext c;
+  c.myCall = settings_.myCall;
+  if (callEntry_) c.wantedCall = gtk_editable_get_text(GTK_EDITABLE(callEntry_));
+  if (scp_.loaded()) c.scp = &scp_;
+  return c;
+}
+
 void MainWindow::appendRx(int slot, const std::string& text) {
   if (slot < 0 || slot >= static_cast<int>(rxBufs_.size())) return;
   GtkTextBuffer* buf = rxBufs_[slot];
   std::string& word = rxWord_[slot];
+  const RxHighlightContext hl = highlightContext();
   for (char raw : text) {
     char c = rxBreaks_[slot].feed(raw);
     if (c == 0) continue;
@@ -1025,15 +1077,28 @@ void MainWindow::appendRx(int slot, const std::string& text) {
     if (std::isalnum(static_cast<unsigned char>(c)) || c == '/') {
       word.push_back(c);
     } else {
-      if (!word.empty() && looksLikeCallsign(word)) {
-        GtkTextIter a, b;
-        gtk_text_buffer_get_end_iter(buf, &b);
-        gtk_text_iter_backward_chars(&b, 1);  // before the delimiter
-        a = b;
-        gtk_text_iter_backward_chars(&a, static_cast<int>(word.size()));
-        bool known = scp_.loaded() && scp_.contains(upper(word));
-        gtk_text_buffer_apply_tag(buf, known ? scpTags_[slot] : callTags_[slot], &a, &b);
+      if (!word.empty()) {
+        GtkTextIter wordStart;
+        gtk_text_buffer_get_end_iter(buf, &wordStart);
+        gtk_text_iter_backward_chars(&wordStart, static_cast<int>(word.size()) + 1);  // + the delimiter
+        for (const RxSpan& span : rxHighlight_[slot].word(word, hl)) {
+          GtkTextTag* tag = nullptr;
+          switch (span.mark) {
+            case RxMark::Call: tag = callTags_[slot]; break;
+            case RxMark::KnownCall: tag = scpTags_[slot]; break;
+            case RxMark::MyCall: tag = myCallTags_[slot]; break;
+            case RxMark::Cq: tag = cqTags_[slot]; break;
+            case RxMark::Report: tag = reportTags_[slot]; break;
+            case RxMark::Exchange: tag = exchangeTags_[slot]; break;
+          }
+          GtkTextIter a = wordStart, b;
+          gtk_text_iter_forward_chars(&a, static_cast<int>(span.pos));
+          b = a;
+          gtk_text_iter_forward_chars(&b, static_cast<int>(span.len));
+          gtk_text_buffer_apply_tag(buf, tag, &a, &b);
+        }
       }
+      if (c == '\n') rxHighlight_[slot].newLine();
       word.clear();
     }
   }
@@ -1057,6 +1122,8 @@ void MainWindow::appendEcho(const std::string& text) {
     GtkTextIter end;
     gtk_text_buffer_get_end_iter(rxBufs_[i], &end);
     rxLineStart_[i] = (t.back() == '\n');
+    rxWord_[i].clear();   // a received word does not continue through what was sent
+    rxHighlight_[i].newLine();
     gtk_text_buffer_insert_with_tags(rxBufs_[i], &end, t.c_str(), -1, echoTags_[i], nullptr);
     gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(rxViews_[i]), rxEndMarks_[i]);
   }
@@ -1068,6 +1135,7 @@ void MainWindow::clearRx() {
     rxWord_[i].clear();
     rxLineStart_[i] = true;
     rxBreaks_[i].reset();
+    rxHighlight_[i].newLine();
   }
 }
 
@@ -1280,8 +1348,12 @@ void MainWindow::pickWord(GtkTextView* view, double x, double y) {
   std::string word = upper(w ? w : "");
   g_free(w);
   if (word.empty()) return;
+  RxSpan embedded{};
   if (looksLikeCallsign(word)) {
     gtk_editable_set_text(GTK_EDITABLE(callEntry_), word.c_str());
+  } else if (findEmbeddedCall(word, highlightContext(), embedded) && embedded.mark != RxMark::MyCall) {
+    // A known call with something stuck to it: take the call, not the junk.
+    gtk_editable_set_text(GTK_EDITABLE(callEntry_), word.substr(embedded.pos, embedded.len).c_str());
   } else if (word.size() == 3 && word[0] == '5' && std::isdigit(static_cast<unsigned char>(word[1])) && std::isdigit(static_cast<unsigned char>(word[2]))) {
     gtk_editable_set_text(GTK_EDITABLE(rstREntry_), word.c_str());
   } else if (std::all_of(word.begin(), word.end(), [](char c) { return std::isdigit(static_cast<unsigned char>(c)); })) {
@@ -1896,7 +1968,8 @@ void MainWindow::setBandMapVisible(bool on) {
 // opens it for the session (modemSidebar_) without changing the saved choice
 // for the full view.
 void MainWindow::setModemOnly(bool on) {
-  for (GtkWidget* w : {bandBar_, macroBar_, logRow_})
+  // Auto CQ repeats a macro of gtty's own; with a logger in charge the logger does that.
+  for (GtkWidget* w : {bandBar_, macroBar_, logRow_, autoCqCheck_})
     if (w) gtk_widget_set_visible(w, !on);
   if (modemOnlyAction_) g_simple_action_set_state(modemOnlyAction_, g_variant_new_boolean(on));
   setBandMapVisible(on ? modemSidebar_ : settings_.bandMapVisible);

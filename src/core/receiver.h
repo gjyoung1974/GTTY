@@ -17,6 +17,7 @@
 #include "core/events.h"
 #include "core/modem/decoder_bank.h"
 #include "core/modem/skimmer.h"
+#include "core/modem/trailing_noise.h"
 #include "core/modem/voter.h"
 
 namespace gtty {
@@ -63,6 +64,9 @@ class Receiver {
   DemodConfig cfg_;
   DecoderBank bank_;
   Voter voter_;
+  // Per text slot (engines, then the vote): sets the noise after a transmission apart from its last word.
+  std::vector<TrailingNoise> trailing_;
+  std::vector<float> lastConfidence_;   // of each engine's latest code
   Skimmer skimmer_;
   bool skimmerOn_ = false;
   double skimLo_ = 300, skimHi_ = 3000, skimStep_ = 50;

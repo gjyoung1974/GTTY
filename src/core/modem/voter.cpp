@@ -75,6 +75,13 @@ void Voter::decide(const Group& g) {
   float confidence = sumAll > 0 ? weight[best] / sumAll : 0.f;
   // A lone, weak opinion (others silent, e.g. squelched) is not worth printing.
   if (total == 1 && weight[best] < 0.2f) return;
+  float agreed = 0;
+  int voters = 0;
+  for (int s = 0; s < nSlots_; ++s) {
+    if (votes_[s]) ++voters;
+    if (g.code[s] == best) agreed += g.conf[s];
+  }
+  strength_ = voters > 0 ? agreed / static_cast<float>(voters) : 0.f;
   if (onCode) onCode(static_cast<uint8_t>(best), confidence, count[best], total);
   auto ch = baudot_.decode(static_cast<uint8_t>(best));
   if (ch && onChar) onChar(*ch);

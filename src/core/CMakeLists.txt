@@ -18,6 +18,7 @@ add_library(gttycore STATIC
   log/logbook.cpp
   log/adif.cpp
   log/callsign.cpp
+  log/rx_highlight.cpp
   log/grid.cpp
   log/callbook.cpp
   net/wsjtx_udp.cpp

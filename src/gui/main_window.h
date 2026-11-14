@@ -13,6 +13,7 @@
 #include "core/log/callbook.h"
 #include "core/log/callsign.h"
 #include "core/log/logbook.h"
+#include "core/log/rx_highlight.h"
 #include "core/macros.h"
 #include "core/net/cluster_client.h"
 #include "core/net/fllog_client.h"
@@ -262,6 +263,9 @@ class MainWindow {
   std::vector<std::string> rxWord_;
   std::vector<GtkTextTag*> callTags_;
   std::vector<GtkTextTag*> scpTags_;
+  std::vector<GtkTextTag*> myCallTags_, cqTags_, reportTags_, exchangeTags_;
+  std::vector<RxHighlighter> rxHighlight_;   // per pane: report / exchange state along the line
+  RxHighlightContext highlightContext() const;
   std::vector<GtkTextTag*> echoTags_;
   GtkWidget* txView_ = nullptr;
   GtkTextBuffer* txBuf_ = nullptr;

@@ -10,11 +10,17 @@ Receiver::Receiver(AudioEngine* engine, EventQueue* events)
   cfg_.sampleRate = kInternalRate;
   addDefaultDecoders(bank_, cfg_);
   pendingText_.resize(bank_.size() + 1);   // + the voted stream
-  bank_.onChar = [this](int slot, char c) {
-    if (slot < static_cast<int>(pendingText_.size())) pendingText_[slot].push_back(c);
+  trailing_.resize(bank_.size() + 1);
+  lastConfidence_.assign(bank_.size(), 0.f);
+  // Each engine reports a code with its confidence, then the character it decodes to.
+  bank_.onCode = [this](int slot, const CodeEvent& e) {
+    if (slot < static_cast<int>(lastConfidence_.size())) lastConfidence_[slot] = e.confidence;
+    voter_.add(slot, e);
   };
-  bank_.onCode = [this](int slot, const CodeEvent& e) { voter_.add(slot, e); };
-  voter_.onChar = [this](char c) { pendingText_[voteSlot()].push_back(c); };
+  bank_.onChar = [this](int slot, char c) {
+    if (slot < static_cast<int>(lastConfidence_.size())) trailing_[slot].feed(c, lastConfidence_[slot], samplePos_, pendingText_[slot]);
+  };
+  voter_.onChar = [this](char c) { trailing_[voteSlot()].feed(c, voter_.lastStrength(), samplePos_, pendingText_[voteSlot()]); };
   rebuildVoter();
 }
 
@@ -127,6 +133,8 @@ void Receiver::processInternal(const float* inConst, size_t n) {
   bank_.process(in, n);
   samplePos_ += n;
   voter_.advance(samplePos_);
+  double charSamples = cfg_.params.charPeriod() * kInternalRate;
+  for (size_t i = 0; i < trailing_.size(); ++i) trailing_[i].idle(samplePos_, charSamples, pendingText_[i]);
   if (skimmerOn_) skimmer_.process(in, n);
   if (spectrum_.process(in, n, spectrumDb_) && events_) {
     events_->push(SpectrumEvent{spectrumDb_, spectrum_.binHz()});
