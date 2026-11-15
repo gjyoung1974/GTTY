@@ -51,7 +51,11 @@ class AudioEngine {
 
   SpscRing<float>& rxRing() { return rx_; }
   float inputPeak() const { return inPeak_.load(); }
+  // Times since the stream was opened that samples were lost: the host reported an
+  // overflow, or the receiver did not empty the ring in time. A steadily rising count
+  // means the decoders are being fed audio with holes in it.
   size_t inputOverruns() const { return overruns_.load(); }
+  size_t outputUnderruns() const { return underruns_.load(); }
 
   void setTxSource(TxSource* s) { txSource_.store(s); }
   TxSource* txSource() const { return txSource_.load(); }
@@ -72,6 +76,7 @@ class AudioEngine {
   SpscRing<float> rx_{1 << 17};
   std::atomic<float> inPeak_{0};
   std::atomic<size_t> overruns_{0};
+  std::atomic<size_t> underruns_{0};
   std::atomic<TxSource*> txSource_{nullptr};
   std::vector<float> scratch_;
 };

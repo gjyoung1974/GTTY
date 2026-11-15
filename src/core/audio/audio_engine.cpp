@@ -47,25 +47,33 @@ int AudioEngine::inCallback(const void* in, void*, unsigned long frames,
   if (flags & paInputOverflow) self->overruns_.fetch_add(1);
   float peak = 0;
   const int ch = self->inChannels_;
-  if (self->scratch_.size() < frames) return paContinue;  // never happens: pre-sized
   float* s = self->scratch_.data();
-  for (unsigned long i = 0; i < frames; ++i) {
-    float v;
-    if (ch == 1) v = x[i];
-    else if (self->inChannel_ == 0) v = x[i * ch];
-    else if (self->inChannel_ == 1) v = x[i * ch + 1];
-    else { v = 0; for (int c = 0; c < ch; ++c) v += x[i * ch + c]; v /= ch; }
-    s[i] = v;
-    peak = std::max(peak, std::fabs(v));
+  const unsigned long cap = self->scratch_.size();
+  // The host decides the block size (see openInput), so take whatever arrives, in
+  // pieces if it is larger than the scratch buffer. Nothing is ever skipped here.
+  for (unsigned long off = 0; off < frames;) {
+    const unsigned long n = std::min(frames - off, cap);
+    const float* blk = x + off * ch;
+    for (unsigned long i = 0; i < n; ++i) {
+      float v;
+      if (ch == 1) v = blk[i];
+      else if (self->inChannel_ == 0) v = blk[i * ch];
+      else if (self->inChannel_ == 1) v = blk[i * ch + 1];
+      else { v = 0; for (int c = 0; c < ch; ++c) v += blk[i * ch + c]; v /= ch; }
+      s[i] = v;
+      peak = std::max(peak, std::fabs(v));
+    }
+    if (self->rx_.push(s, n) < n) self->overruns_.fetch_add(1);   // the receiver fell behind
+    off += n;
   }
-  self->rx_.push(s, frames);
   self->inPeak_.store(peak);
   return paContinue;
 }
 
 int AudioEngine::outCallback(const void*, void* out, unsigned long frames,
-                             const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags, void* user) {
+                             const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags flags, void* user) {
   auto* self = static_cast<AudioEngine*>(user);
+  if (flags & paOutputUnderflow) self->underruns_.fetch_add(1);
   float* y = static_cast<float*>(out);
   TxSource* src = self->txSource_.load();
   if (src) src->generate(y, frames);
@@ -91,10 +99,33 @@ bool AudioEngine::openInput(int device, double sampleRate, int inChannel, std::s
   inChannels_ = p.channelCount;
   inChannel_ = inChannel;
   scratch_.assign(8192, 0.f);
-  PaError e = Pa_OpenStream(&in_, &p, nullptr, sampleRate, 1024, paClipOff, inCallback, this);
-  if (e != paNoError) { err = Pa_GetErrorText(e); in_ = nullptr; return false; }
-  e = Pa_StartStream(in_);
-  if (e != paNoError) { err = Pa_GetErrorText(e); Pa_CloseStream(in_); in_ = nullptr; return false; }
+  overruns_.store(0);
+  // Receive latency does not matter for RTTY; lost samples do. Asking for the device's
+  // "low" latency together with a fixed callback size makes PortAudio adapt a host
+  // buffer smaller than one callback block, and on some codecs it then overflows all
+  // the time: the C-Media codec in a Yaesu FT-710 delivered 58 % of the samples at
+  // 44.1 kHz with 1024-frame callbacks, which decodes as garbage under a waterfall that
+  // looks normal. So: let the host choose the block size (nothing to adapt, measured
+  // 100 % on that codec at any latency) and ask for a generous buffer. The later
+  // attempts are fallbacks for a host that refuses the first; the last is what gtty
+  // used before, which works on codecs that report a larger low latency.
+  struct Attempt { double latency; unsigned long frames; };
+  const Attempt attempts[] = {
+      {std::max(d->defaultHighInputLatency, 0.1), paFramesPerBufferUnspecified},
+      {d->defaultHighInputLatency, paFramesPerBufferUnspecified},
+      {d->defaultLowInputLatency, 1024},
+  };
+  PaError e = paNoError;
+  for (const Attempt& a : attempts) {
+    p.suggestedLatency = a.latency;
+    e = Pa_OpenStream(&in_, &p, nullptr, sampleRate, a.frames, paClipOff, inCallback, this);
+    if (e != paNoError) { in_ = nullptr; continue; }
+    e = Pa_StartStream(in_);
+    if (e == paNoError) break;
+    Pa_CloseStream(in_);
+    in_ = nullptr;
+  }
+  if (e != paNoError) { err = Pa_GetErrorText(e); return false; }
   inRate_ = sampleRate;
   rx_.clear();
   return true;
@@ -115,10 +146,27 @@ bool AudioEngine::openOutput(int device, double sampleRate, std::string& err) {
   if (Pa_IsFormatSupported(nullptr, &p, sampleRate) != paFormatIsSupported) {
     sampleRate = d->defaultSampleRate;
   }
-  PaError e = Pa_OpenStream(&out_, nullptr, &p, sampleRate, 1024, paClipOff, outCallback, this);
-  if (e != paNoError) { err = Pa_GetErrorText(e); out_ = nullptr; return false; }
-  e = Pa_StartStream(out_);
-  if (e != paNoError) { err = Pa_GetErrorText(e); Pa_CloseStream(out_); out_ = nullptr; return false; }
+  underruns_.store(0);
+  // As for the input: the host chooses the block size. The buffer is kept short because
+  // the transmitter unkeys 120 ms after its queue drains, and whatever is still in this
+  // buffer at that moment would be cut off.
+  struct Attempt { double latency; unsigned long frames; };
+  const Attempt attempts[] = {
+      {std::clamp(d->defaultHighOutputLatency, 0.03, 0.06), paFramesPerBufferUnspecified},
+      {d->defaultLowOutputLatency, paFramesPerBufferUnspecified},
+      {d->defaultLowOutputLatency, 1024},
+  };
+  PaError e = paNoError;
+  for (const Attempt& a : attempts) {
+    p.suggestedLatency = a.latency;
+    e = Pa_OpenStream(&out_, nullptr, &p, sampleRate, a.frames, paClipOff, outCallback, this);
+    if (e != paNoError) { out_ = nullptr; continue; }
+    e = Pa_StartStream(out_);
+    if (e == paNoError) break;
+    Pa_CloseStream(out_);
+    out_ = nullptr;
+  }
+  if (e != paNoError) { err = Pa_GetErrorText(e); return false; }
   outRate_ = sampleRate;
   return true;
 }
