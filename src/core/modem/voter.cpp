@@ -20,6 +20,8 @@ void Voter::setVoting(int slot, bool votes) {
 }
 
 void Voter::reset() {
+  pending_.clear();
+  inSignal_ = false;
   groups_.clear();
   baudot_.reset();
 }
@@ -49,10 +51,27 @@ void Voter::add(int slot, const CodeEvent& e) {
   groups_.insert(it, g);
 }
 
+void Voter::flushPending() {
+  for (const Pending& p : pending_) {
+    strength_ = p.strength;
+    if (onCode) onCode(p.code, p.confidence, p.agree, p.total);
+    auto ch = baudot_.decode(p.code);
+    if (ch && onChar) onChar(*ch);
+  }
+  pending_.clear();
+}
+
 void Voter::advance(uint64_t now) {
   while (!groups_.empty() && groups_.front().t0 + hold_ <= now) {
     decide(groups_.front());
     groups_.pop_front();
+  }
+  // Nothing followed the held characters (the squelch closed, the station stopped):
+  // they were the end of the transmission, so print them.
+  if (!pending_.empty() &&
+      static_cast<double>(now) - static_cast<double>(pendingAt_) > static_cast<double>(hold_) + 3.0 * charSamples_) {
+    flushPending();
+    inSignal_ = false;
   }
 }
 
@@ -82,6 +101,30 @@ void Voter::decide(const Group& g) {
     if (g.code[s] == best) agreed += g.conf[s];
   }
   strength_ = voters > 0 ? agreed / static_cast<float>(voters) : 0.f;
+  // Between transmissions the matched-filter engines go on printing what the noise
+  // spells, each something different, while the correlator mostly stays silent. Voting
+  // on that would print the noise of all of them, and the merged pane would read worse
+  // than any one engine. So a transmission has to start with a decision the engines
+  // stand behind; inside one, a doubtful decision (a fade, a static crash) is held back
+  // until a sound one follows it, and a run of doubtful ones ends the transmission and
+  // is dropped. A single voting engine is passed through as it is.
+  if (voters >= 2) {
+    if (!inSignal_) {
+      if (strength_ < kEnterStrength) return;
+      inSignal_ = true;
+    } else if (strength_ < kDoubtStrength) {
+      pending_.push_back({static_cast<uint8_t>(best), strength_, confidence, count[best], total});
+      pendingAt_ = g.t0;
+      if (pending_.size() > kMaxDoubtful) { pending_.clear(); inSignal_ = false; }
+      return;
+    }
+    const float current = strength_;
+    flushPending();
+    strength_ = current;
+  } else {
+    flushPending();
+    inSignal_ = false;
+  }
   if (onCode) onCode(static_cast<uint8_t>(best), confidence, count[best], total);
   auto ch = baudot_.decode(static_cast<uint8_t>(best));
   if (ch && onChar) onChar(*ch);
