@@ -262,7 +262,7 @@ int cmdRecord(const Opts& o) {
     all.insert(all.end(), buf.begin(), buf.begin() + n);
   }
   std::cerr << "captured " << all.size() << " samples (" << all.size() / rate << " s of audio in "
-            << o.seconds << " s wall clock)\n";
+            << o.seconds << " s wall clock, " << engine.inputOverruns() << " overruns)\n";
   if (!writeWavFile(o.positional[1], all, rate, err)) { std::cerr << err << "\n"; return 1; }
   return 0;
 }
