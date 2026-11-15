@@ -57,7 +57,7 @@ codec2 decides about half a second later than the others, so letting it vote del
 
 ## Best guess
 
-The engines' characters are aligned in time and each position is decided by a confidence-weighted vote. The merged stream appears in the **Best guess** pane and feeds GridTracker, the XML-RPC server, the session file and callsign reporting. The pane can be hidden under *Preferences → Decoders* if you prefer to read the engines directly.
+The engines' characters are aligned in time and each position is decided by a confidence-weighted vote. Between transmissions the engines print different noise, so the vote only starts printing when the engines agree with confidence, holds back a doubtful character inside a transmission until a sound one follows, and drops a run of doubtful ones. The pane therefore shows less noise than the engine panes, and a weak character can appear a moment later than it does in them. The merged stream appears in the **Best guess** pane and feeds GridTracker, the XML-RPC server, the session file and callsign reporting. The pane can be hidden under *Preferences → Decoders* if you prefer to read the engines directly.
 
 During the first second of a new signal only one engine may have an opinion, so the merged pane can miss the first characters while the engine panes show them.
 

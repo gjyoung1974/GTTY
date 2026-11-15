@@ -108,9 +108,11 @@ int main() {
       for (int slot : {0, 1, vote}) {
         size_t at = text[slot].find(sent);
         bool intact = at != std::string::npos;
-        // A space, or the line break the noise itself began with.
-        char next = intact && at + sent.size() < text[slot].size() ? text[slot][at + sent.size()] : 0;
-        bool apart = next == ' ' || next == '\n' || next == '\r';
+        // A space, or the line break the noise itself began with. The vote pane gates
+        // noise out altogether, so there the message may simply be the end of the text.
+        bool ends = intact && at + sent.size() == text[slot].size();
+        char next = intact && !ends ? text[slot][at + sent.size()] : 0;
+        bool apart = next == ' ' || next == '\n' || next == '\r' || (slot == vote && ends);
         if (!intact || !apart)
           std::fprintf(stderr, "SNR %.0f dB, seed %u, slot %d: %s: \"%s\"\n", snr, seed, slot,
                        intact ? "noise not set apart" : "message changed", text[slot].c_str());
