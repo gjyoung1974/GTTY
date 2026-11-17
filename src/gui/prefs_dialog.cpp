@@ -366,7 +366,7 @@ void showPrefsDialog(GtkWidget* parent, Settings& s, std::function<void()> onApp
     std::vector<std::string> ins{"(default)"}, outs{"(default)"};
     int inSel = 0, outSel = 0;
     for (const auto& d : AudioEngine::listDevices()) {
-      std::string label = d.name + "  [" + d.hostApi + "]";
+      std::string label = d.name;
       if (d.maxInputs > 0) { ins.push_back(label); pr->inputs.push_back(d.name); if (d.name == s.inputDevice) inSel = static_cast<int>(ins.size()) - 1; }
       if (d.maxOutputs > 0) { outs.push_back(label); pr->outputs.push_back(d.name); if (d.name == s.outputDevice) outSel = static_cast<int>(outs.size()) - 1; }
     }
