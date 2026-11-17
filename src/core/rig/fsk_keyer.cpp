@@ -77,6 +77,8 @@ bool FskKeyer::open(const std::string& device, Method m, const RttyParams& p, bo
 
 #if defined(__linux__)
 
+#if defined(TCGETS2) && defined(TCSETS2)
+
 // Linux: termios2 carries an arbitrary integer baud rate in c_ispeed/c_ospeed
 // once BOTHER replaces the rate constant in c_cflag.
 bool FskKeyer::configureUart(std::string& err) {
@@ -93,6 +95,29 @@ bool FskKeyer::configureUart(std::string& err) {
   if (ioctl(fd_, TCSETS2, &tio) < 0) { err = std::string("TCSETS2: ") + strerror(errno); return false; }
   return true;
 }
+
+#else
+
+// powerpc has no termios2/TCGETS2. Its struct termios itself carries
+// c_ispeed/c_ospeed, and plain TCGETS/TCSETS pass them to the kernel, which
+// keeps them when BOTHER in c_cflag marks the rate as an arbitrary one.
+// Clearing CIBAUD makes the input rate follow the output rate.
+bool FskKeyer::configureUart(std::string& err) {
+  struct termios tio{};
+  if (ioctl(fd_, TCGETS, &tio) < 0) { err = std::string("TCGETS: ") + strerror(errno); return false; }
+  tio.c_cflag &= ~(CBAUD | CIBAUD | CSIZE | PARENB | CRTSCTS);
+  tio.c_cflag |= BOTHER | CS5 | CSTOPB | CREAD | CLOCAL;  // 5 data bits, 2 stop bits, no parity
+  tio.c_iflag = 0;
+  tio.c_oflag = 0;
+  tio.c_lflag = 0;
+  int speed = static_cast<int>(std::lround(params_.baud));
+  tio.c_ispeed = speed;
+  tio.c_ospeed = speed;
+  if (ioctl(fd_, TCSETS, &tio) < 0) { err = std::string("TCSETS: ") + strerror(errno); return false; }
+  return true;
+}
+
+#endif
 
 #else
 
