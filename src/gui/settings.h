@@ -85,7 +85,7 @@ struct Settings {
   bool followRigSideband = true;   // swap mark and space while the rig is on the upper sideband
   std::vector<DecoderSlotSettings> decoders = defaultDecoderSettings();
   bool showVotePane = true;   // merged best-guess pane
-  bool votePaneBelow = false;  // best-guess pane under the engine panes instead of above them
+  bool votePaneAbove = false;  // best-guess pane above the engine panes instead of under them
   bool skimmerEnabled = false;
   double skimmerStepHz = 50;  // channel spacing across the waterfall range
   bool skimmerWaterfallCalls = true;  // label identified stations on the waterfall
