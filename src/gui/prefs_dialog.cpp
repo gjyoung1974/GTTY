@@ -414,20 +414,24 @@ void showPrefsDialog(GtkWidget* parent, Settings& s, std::function<void()> onApp
     GtkWidget* g = group(pg, "Sound card");
     std::vector<std::string> ins{"(default)"}, outs{"(default)"};
     int inSel = 0, outSel = 0;
-    for (const auto& d : AudioEngine::listDevices()) {
-      // A USB card by what it reports, e.g. "C-Media Electronics Inc. USB Audio Device — Mic (hw:1,0)",
-      // in place of PortAudio's "USB Audio Device: USB Audio (hw:1,0)". Others: PortAudio's name.
-      auto label = [&](const std::string& kind) {
-        if (d.card.empty()) return d.name;
-        std::string l = d.card;
-        if (!kind.empty()) l += " — " + kind;
-        return l + " (" + d.hwId + ")";
-      };
-      if (d.maxInputs > 0) { ins.push_back(label(d.inputKind)); pr->inputs.push_back(d.name); if (d.name == s.inputDevice) inSel = static_cast<int>(ins.size()) - 1; }
-      if (d.maxOutputs > 0) { outs.push_back(label(d.outputKind)); pr->outputs.push_back(d.name); if (d.name == s.outputDevice) outSel = static_cast<int>(outs.size()) - 1; }
+    const auto devices = AudioEngine::listDevices();
+    // The saved devices, found again even if the card number changed since (see findAudioDevice).
+    const AudioDeviceInfo* inDev = findAudioDevice(devices, s.inputDevice, true);
+    const AudioDeviceInfo* outDev = findAudioDevice(devices, s.outputDevice, false);
+    pr->inputs.push_back("");
+    pr->outputs.push_back("");
+    for (const auto& d : devices) {
+      if (d.maxInputs > 0) { ins.push_back(d.label(true)); pr->inputs.push_back(d.name); if (&d == inDev) inSel = static_cast<int>(ins.size()) - 1; }
+      if (d.maxOutputs > 0) { outs.push_back(d.label(false)); pr->outputs.push_back(d.name); if (&d == outDev) outSel = static_cast<int>(outs.size()) - 1; }
     }
-    pr->inputs.insert(pr->inputs.begin(), "");
-    pr->outputs.insert(pr->outputs.begin(), "");
+    // A saved device that isn't plugged in stays listed and selected, so closing Preferences
+    // doesn't replace it with "(default)".
+    if (!s.inputDevice.empty() && !inDev) {
+      ins.push_back(s.inputDevice + " (not found)"); pr->inputs.push_back(s.inputDevice); inSel = static_cast<int>(ins.size()) - 1;
+    }
+    if (!s.outputDevice.empty() && !outDev) {
+      outs.push_back(s.outputDevice + " (not found)"); pr->outputs.push_back(s.outputDevice); outSel = static_cast<int>(outs.size()) - 1;
+    }
     pr->inDev = combo(g, "Input device", ins, inSel, true, true);
     pr->outDev = combo(g, "Output device", outs, outSel, true, true);
     pr->inChan = combo(g, "Input channel", {"Mix", "Left", "Right"}, s.inputChannel + 1);

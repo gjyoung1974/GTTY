@@ -49,6 +49,7 @@ struct Opts {
   bool allEngines = false;    // enable every engine, including the codec2 comparison decoder
   double corrEdge = -1, corrAccept = -1;
   int inDev = -1, outDev = -1;
+  std::string inName;         // --in given as a name (as `devices` prints it)
   int model = 1;
   std::string device;
   int baudRate = 0;
@@ -88,7 +89,11 @@ Opts parse(int argc, char** argv) {
     else if (a == "--usos") o.params.unshiftOnSpace = true;
     else if (a == "--no-usos") o.params.unshiftOnSpace = false;
     else if (a == "--ustty") o.params.variant = BaudotVariant::USTTY;
-    else if (a == "--in") o.inDev = atoi(next().c_str());
+    else if (a == "--in") {
+      std::string v = next();
+      if (!v.empty() && v.find_first_not_of("0123456789") == std::string::npos) o.inDev = atoi(v.c_str());
+      else o.inName = v;
+    }
     else if (a == "--out") o.outDev = atoi(next().c_str());
     else if (a == "--model") o.model = atoi(next().c_str());
     else if (a == "--device") o.device = next();
@@ -238,10 +243,20 @@ int cmdDecode(const Opts& o) {
   return 0;
 }
 
+// --in N opens PortAudio device N; --in NAME the device `devices` lists under that name,
+// e.g. a sound server's "server:alsa_input...".
+bool openCliInput(AudioEngine& engine, const Opts& o, std::string& err) {
+  if (o.inName.empty()) return engine.openInput(o.inDev, o.rate, -1, err);
+  const auto devices = AudioEngine::listDevices();
+  const AudioDeviceInfo* d = findAudioDevice(devices, o.inName, true);
+  if (!d) { err = "no input device named \"" + o.inName + "\" (see gtty-cli devices)"; return false; }
+  return engine.openInput(d->index, o.rate, -1, err, d->serverNode);
+}
+
 int cmdListen(const Opts& o) {
   AudioEngine engine;
   std::string err;
-  if (!engine.openInput(o.inDev, o.rate, -1, err)) { std::cerr << "audio: " << err << "\n"; return 1; }
+  if (!openCliInput(engine, o, err)) { std::cerr << "audio: " << err << "\n"; return 1; }
   std::cerr << "listening at " << engine.inputRate() << " Hz; Ctrl-C to stop\n";
   EventQueue q;
   Receiver rx(&engine, &q);
@@ -260,7 +275,7 @@ int cmdRecord(const Opts& o) {
   if (o.positional.size() < 2) { std::cerr << "usage: record out.wav [--in DEV] [--seconds N]\n"; return 2; }
   AudioEngine engine;
   std::string err;
-  if (!engine.openInput(o.inDev, o.rate, -1, err)) { std::cerr << "audio: " << err << "\n"; return 1; }
+  if (!openCliInput(engine, o, err)) { std::cerr << "audio: " << err << "\n"; return 1; }
   double rate = engine.inputRate();
   std::cerr << "recording " << o.seconds << " s at " << rate << " Hz\n";
   std::vector<float> all, buf(4096);
@@ -278,11 +293,16 @@ int cmdRecord(const Opts& o) {
 
 int cmdDevices() {
   for (const auto& d : AudioEngine::listDevices()) {
-    std::printf("%3d  %-50s %-10s in:%d out:%d %.0f Hz\n", d.index, d.name.c_str(), d.hostApi.c_str(),
+    // The sound server's devices share PortAudio's "pipewire"/"pulse" index: pick them by name.
+    if (d.serverNode.empty()) std::printf("%3d  ", d.index);
+    else std::printf("  -  ");
+    std::printf("%-50s %-10s in:%d out:%d %.0f Hz\n", d.name.c_str(), d.hostApi.c_str(),
                 d.maxInputs, d.maxOutputs, d.defaultSampleRate);
     if (!d.inputKind.empty()) std::printf("       input:  %s\n", d.inputKind.c_str());
     if (!d.outputKind.empty()) std::printf("       output: %s\n", d.outputKind.c_str());
     if (!d.card.empty()) std::printf("       card:   %s\n", d.card.c_str());
+    if (d.maxInputs > 0) std::printf("       shown as: %s\n", d.label(true).c_str());
+    if (d.maxOutputs > 0) std::printf("       shown as: %s\n", d.label(false).c_str());
   }
   std::printf("default input %d, default output %d\n", AudioEngine::defaultInputDevice(),
               AudioEngine::defaultOutputDevice());

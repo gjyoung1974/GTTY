@@ -87,7 +87,7 @@ An option gtty-cli does not know is an error (exit status 2), not a file name. O
 
 | Option | Meaning |
 |---|---|
-| `--in N`, `--out N` | PortAudio device index from `gtty-cli devices` |
+| `--in N`, `--out N` | PortAudio device index from `gtty-cli devices`; `--in` also takes a device name as `devices` prints it, e.g. `server:alsa_input.usb-…` for a PipeWire/PulseAudio input |
 | `--seconds N` | Recording length |
 | `--iq` | Treat a stereo file as I/Q baseband (an SDR recording) |
 | `--center HZ` | Audio frequency the I/Q center is shifted to (default a quarter of the sample rate) |
