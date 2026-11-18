@@ -19,6 +19,12 @@ struct AudioDeviceInfo {
   int maxInputs;
   int maxOutputs;
   double defaultSampleRate;
+  // What the device connects to, where the system says (Linux ALSA hardware devices only),
+  // e.g. "Mic", "Line", "Speaker", "S/PDIF"; empty when unknown.
+  std::string inputKind;
+  std::string outputKind;
+  std::string hwId;  // the ALSA hardware address, e.g. "hw:1,0"; empty for other devices
+  std::string card;  // a USB sound card's full name when it says more than `name`, e.g. "C-Media Electronics Inc. USB Audio Device"
 };
 
 class TxSource {

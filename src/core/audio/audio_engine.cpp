@@ -4,7 +4,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <mutex>
+#include <set>
+#include <string>
+
+#ifdef GTTY_HAVE_ALSA
+#include <alsa/asoundlib.h>
+#endif
 
 namespace gtty {
 
@@ -13,6 +20,68 @@ std::once_flag g_paInit;
 void ensurePa() {
   std::call_once(g_paInit, [] { Pa_Initialize(); });
 }
+
+#ifdef GTTY_HAVE_ALSA
+// Fills inputKind/outputKind/card for a PortAudio ALSA device named "...(hw:C,D)".
+// USB audio cards name their mixer controls after the USB terminal types the device reports
+// (Mic, Line, Speaker, Headphone, IEC958 ...), so those controls say what each direction is
+// wired to. Other cards' controls are card-wide and don't map to one PCM, so for those only
+// nothing is added (their PCM names, e.g. "ALC892 Analog"/"HDMI 0", are already in `name`).
+void describeAlsa(AudioDeviceInfo& d) {
+  int card = -1, dev = -1;
+  auto at = d.name.rfind("(hw:");
+  if (at == std::string::npos || std::sscanf(d.name.c_str() + at, "(hw:%d,%d)", &card, &dev) != 2) return;
+  d.hwId = "hw:" + std::to_string(card) + "," + std::to_string(dev);
+  snd_ctl_t* ctl = nullptr;
+  std::string hw = "hw:" + std::to_string(card);
+  if (snd_ctl_open(&ctl, hw.c_str(), 0) < 0) return;
+  snd_ctl_card_info_t* info;
+  snd_ctl_card_info_alloca(&info);
+  bool usb = false;
+  if (snd_ctl_card_info(ctl, info) >= 0) {
+    std::string name = snd_ctl_card_info_get_name(info), lng = snd_ctl_card_info_get_longname(info);
+    usb = std::string(snd_ctl_card_info_get_driver(info)) == "USB-Audio";
+    auto cut = lng.find(" at ");  // drop " at usb-xhci-hcd.4.auto-1.2, full speed"
+    if (cut != std::string::npos) lng.resize(cut);
+    if (usb && !lng.empty() && lng != name) d.card = lng;  // adds the maker; on-board cards' long names are board IDs
+  }
+  if (usb) {
+    snd_ctl_elem_list_t* list;
+    snd_ctl_elem_list_alloca(&list);
+    std::set<std::string> capture, playback;  // control-name prefixes, e.g. "Mic", "Speaker"
+    if (snd_ctl_elem_list(ctl, list) >= 0) {
+      unsigned n = snd_ctl_elem_list_get_count(list);
+      if (snd_ctl_elem_list_alloc_space(list, n) >= 0 && snd_ctl_elem_list(ctl, list) >= 0) {
+        for (unsigned i = 0; i < snd_ctl_elem_list_get_used(list); ++i) {
+          if (snd_ctl_elem_list_get_interface(list, i) != SND_CTL_ELEM_IFACE_MIXER) continue;
+          std::string e = snd_ctl_elem_list_get_name(list, i);
+          for (const char* dir : {" Capture ", " Playback "}) {
+            auto pos = e.find(dir);
+            if (pos == std::string::npos || pos == 0) continue;
+            std::string what = e.substr(0, pos);
+            if (what == "PCM" || what == "Master") continue;  // unnamed feature units: no terminal type
+            (dir[1] == 'C' ? capture : playback).insert(what);
+          }
+        }
+      }
+      snd_ctl_elem_list_free_space(list);
+    }
+    // A "Mic Playback" control is the mic monitored into the output, not an output itself.
+    for (const auto& c : capture) playback.erase(c);
+    auto join = [](const std::set<std::string>& s) {
+      std::string r;
+      for (std::string k : s) {
+        if (k.rfind("IEC958", 0) == 0) k = "S/PDIF" + k.substr(6);
+        r += (r.empty() ? "" : ", ") + k;
+      }
+      return r;
+    };
+    if (d.maxInputs > 0) d.inputKind = join(capture);
+    if (d.maxOutputs > 0) d.outputKind = join(playback);
+  }
+  snd_ctl_close(ctl);
+}
+#endif
 }  // namespace
 
 AudioEngine::AudioEngine() { ensurePa(); }
@@ -31,7 +100,10 @@ std::vector<AudioDeviceInfo> AudioEngine::listDevices() {
     if (!d) continue;
     const PaHostApiInfo* h = Pa_GetHostApiInfo(d->hostApi);
     v.push_back({i, d->name, h ? h->name : "?", d->maxInputChannels, d->maxOutputChannels,
-                 d->defaultSampleRate});
+                 d->defaultSampleRate, {}, {}, {}, {}});
+#ifdef GTTY_HAVE_ALSA
+    if (h && h->type == paALSA) describeAlsa(v.back());
+#endif
   }
   return v;
 }

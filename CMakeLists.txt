@@ -47,6 +47,7 @@ pkg_check_modules(SAMPLERATE REQUIRED IMPORTED_TARGET samplerate)
 pkg_check_modules(SNDFILE REQUIRED IMPORTED_TARGET sndfile)
 pkg_check_modules(SQLITE3 REQUIRED IMPORTED_TARGET sqlite3)
 pkg_check_modules(CURL IMPORTED_TARGET libcurl)   # optional: callbook lookups (QRZ, HamQTH)
+pkg_check_modules(ALSA IMPORTED_TARGET alsa)      # optional (Linux): what each sound card input/output is (Mic, Line, ...)
 pkg_check_modules(CODEC2 IMPORTED_TARGET codec2)  # optional: libcodec2 FSK comparison decoder
 if(NOT CODEC2_FOUND)
   message(STATUS "libcodec2 not found; the codec2 comparison decoder will not be built (libcodec2-dev).")

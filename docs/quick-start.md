@@ -15,7 +15,7 @@ Choose the appearance (follow system, light or dark) on the same page if you lik
 
 ## 2. Audio
 
-On **Preferences → Audio** pick the input device that carries receive audio from the rig and the output device that feeds its transmit audio. The list shows every PortAudio device with its host API in brackets. Leave both on *(default)* to use the system's default devices.
+On **Preferences → Audio** pick the input device that carries receive audio from the rig and the output device that feeds its transmit audio. The list shows every PortAudio device; on Linux, a USB sound card's entries also say what each one is wired to (*Mic*, *Line*, *Speaker*, *S/PDIF* ...) and who made the card, so two "USB Audio" devices can be told apart. Leave both on *(default)* to use the system's default devices.
 
 If the receive audio only arrives on one channel of a stereo input, set **Input channel** to Left or Right; *Mix* averages both.
 

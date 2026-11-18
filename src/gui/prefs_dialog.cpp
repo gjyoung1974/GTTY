@@ -185,9 +185,57 @@ GtkWidget* toggle(GtkWidget* g, const char* title, bool value, const char* subti
   adw_preferences_group_add(ADW_PREFERENCES_GROUP(g), r);
   return r;
 }
-GtkWidget* combo(GtkWidget* g, const char* title, const std::vector<std::string>& items, int selected, bool search = false) {
+// A popover list factory whose items show the whole string: the default one ellipsizes them
+// to a narrow popover, so similar long names (sound card devices) can't be told apart.
+// Each item keeps the checkmark on the row's current selection.
+GtkListItemFactory* wideListFactory(GtkWidget* row) {
+  GtkListItemFactory* f = gtk_signal_list_item_factory_new();
+  g_signal_connect(f, "setup", G_CALLBACK(+[](GtkSignalListItemFactory*, GObject* obj, gpointer) {
+    GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    GtkWidget* label = gtk_label_new(nullptr);
+    gtk_label_set_xalign(GTK_LABEL(label), 0);
+    gtk_label_set_wrap(GTK_LABEL(label), TRUE);
+    gtk_label_set_wrap_mode(GTK_LABEL(label), PANGO_WRAP_WORD_CHAR);
+    gtk_label_set_max_width_chars(GTK_LABEL(label), 70);
+    gtk_widget_set_hexpand(label, TRUE);
+    GtkWidget* check = gtk_image_new_from_icon_name("object-select-symbolic");
+    gtk_box_append(GTK_BOX(box), label);
+    gtk_box_append(GTK_BOX(box), check);
+    gtk_list_item_set_child(GTK_LIST_ITEM(obj), box);
+  }), nullptr);
+  g_signal_connect(f, "bind", G_CALLBACK(+[](GtkSignalListItemFactory*, GObject* obj, gpointer r) {
+    GtkListItem* item = GTK_LIST_ITEM(obj);
+    GtkWidget* box = gtk_list_item_get_child(item);
+    GtkWidget* label = gtk_widget_get_first_child(box);
+    gtk_label_set_text(GTK_LABEL(label), gtk_string_object_get_string(GTK_STRING_OBJECT(gtk_list_item_get_item(item))));
+    auto update = +[](GObject* row, GParamSpec*, gpointer li) {
+      GtkListItem* it = GTK_LIST_ITEM(li);
+      GtkWidget* c = gtk_widget_get_last_child(gtk_list_item_get_child(it));
+      gtk_widget_set_opacity(c, adw_combo_row_get_selected(ADW_COMBO_ROW(row)) == gtk_list_item_get_position(it) ? 1 : 0);
+    };
+    update(G_OBJECT(r), nullptr, item);
+    gulong id = g_signal_connect(r, "notify::selected", G_CALLBACK(update), item);
+    g_object_set_data(obj, "sel-handler", reinterpret_cast<gpointer>(id));
+  }), row);
+  g_signal_connect(f, "unbind", G_CALLBACK(+[](GtkSignalListItemFactory*, GObject* obj, gpointer r) {
+    auto id = reinterpret_cast<gulong>(g_object_get_data(obj, "sel-handler"));
+    if (id) g_signal_handler_disconnect(r, id);
+    g_object_set_data(obj, "sel-handler", nullptr);
+  }), row);
+  return f;
+}
+// longValues: list the choices in full (wideListFactory) and show the selection as the row's
+// subtitle, which gets the full row width, instead of truncated beside the title.
+GtkWidget* combo(GtkWidget* g, const char* title, const std::vector<std::string>& items, int selected, bool search = false,
+                 bool longValues = false) {
   GtkWidget* r = adw_combo_row_new();
   adw_preferences_row_set_title(ADW_PREFERENCES_ROW(r), title);
+  if (longValues) {
+    adw_combo_row_set_use_subtitle(ADW_COMBO_ROW(r), TRUE);
+    GtkListItemFactory* f = wideListFactory(r);
+    adw_combo_row_set_list_factory(ADW_COMBO_ROW(r), f);
+    g_object_unref(f);
+  }
   std::vector<const char*> arr;
   for (const auto& s : items) arr.push_back(s.c_str());
   arr.push_back(nullptr);
@@ -366,14 +414,21 @@ void showPrefsDialog(GtkWidget* parent, Settings& s, std::function<void()> onApp
     std::vector<std::string> ins{"(default)"}, outs{"(default)"};
     int inSel = 0, outSel = 0;
     for (const auto& d : AudioEngine::listDevices()) {
-      std::string label = d.name;
-      if (d.maxInputs > 0) { ins.push_back(label); pr->inputs.push_back(d.name); if (d.name == s.inputDevice) inSel = static_cast<int>(ins.size()) - 1; }
-      if (d.maxOutputs > 0) { outs.push_back(label); pr->outputs.push_back(d.name); if (d.name == s.outputDevice) outSel = static_cast<int>(outs.size()) - 1; }
+      // A USB card by what it reports, e.g. "C-Media Electronics Inc. USB Audio Device — Mic (hw:1,0)",
+      // in place of PortAudio's "USB Audio Device: USB Audio (hw:1,0)". Others: PortAudio's name.
+      auto label = [&](const std::string& kind) {
+        if (d.card.empty()) return d.name;
+        std::string l = d.card;
+        if (!kind.empty()) l += " — " + kind;
+        return l + " (" + d.hwId + ")";
+      };
+      if (d.maxInputs > 0) { ins.push_back(label(d.inputKind)); pr->inputs.push_back(d.name); if (d.name == s.inputDevice) inSel = static_cast<int>(ins.size()) - 1; }
+      if (d.maxOutputs > 0) { outs.push_back(label(d.outputKind)); pr->outputs.push_back(d.name); if (d.name == s.outputDevice) outSel = static_cast<int>(outs.size()) - 1; }
     }
     pr->inputs.insert(pr->inputs.begin(), "");
     pr->outputs.insert(pr->outputs.begin(), "");
-    pr->inDev = combo(g, "Input device", ins, inSel, true);
-    pr->outDev = combo(g, "Output device", outs, outSel, true);
+    pr->inDev = combo(g, "Input device", ins, inSel, true, true);
+    pr->outDev = combo(g, "Output device", outs, outSel, true, true);
     pr->inChan = combo(g, "Input channel", {"Mix", "Left", "Right"}, s.inputChannel + 1);
   }
   // --- Rig

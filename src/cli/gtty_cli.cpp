@@ -280,6 +280,9 @@ int cmdDevices() {
   for (const auto& d : AudioEngine::listDevices()) {
     std::printf("%3d  %-50s %-10s in:%d out:%d %.0f Hz\n", d.index, d.name.c_str(), d.hostApi.c_str(),
                 d.maxInputs, d.maxOutputs, d.defaultSampleRate);
+    if (!d.inputKind.empty()) std::printf("       input:  %s\n", d.inputKind.c_str());
+    if (!d.outputKind.empty()) std::printf("       output: %s\n", d.outputKind.c_str());
+    if (!d.card.empty()) std::printf("       card:   %s\n", d.card.c_str());
   }
   std::printf("default input %d, default output %d\n", AudioEngine::defaultInputDevice(),
               AudioEngine::defaultOutputDevice());
