@@ -38,9 +38,10 @@ To the right of the waterfall:
 
 - **XY scope**: the classic crossed-ellipse tuning display. Mark drives one axis, space the other. A well tuned signal shows two ellipses at right angles.
 - **AFC readout**: how far the AFC has pulled the decoder from the nominal tones, with **SQL** appended while the squelch is closed.
-- **Quality bar**: the primary decoder's signal quality, 0 to 1.
+- **Quality bar**: the primary decoder's signal quality, 0 to 1. With the squelch on, a red line marks the gate and the shaded part to its left is the muted range: the fill is green while text passes and grey while it is muted.
 - **Level bar**: audio input level. Keep it out of the top band.
 - **Filter** and **IF shift**: the rig's receiver filter width and passband shift, enabled while a rig is connected. See [Rig control](rig-control.md).
+- **Squelch**: mutes decoder output below this quality; fully left is off.
 
 ## Receive panes
 
@@ -127,7 +128,6 @@ The controls sit in one row when the window is wide enough and wrap onto further
 | **Net** | Transmit on the AFC-tracked receive tones rather than the nominal ones |
 | **Auto RX** | Return to receive automatically once the transmit buffer has been empty for the configured delay |
 | **Auto CQ** | Repeat the CQ macro with a pause between calls until a callsign is entered. Not shown in modem-only view, where the logger sends the CQs |
-| **Squelch** | Mutes decoder output below this quality; 0 is off |
 
 ## Status line
 
