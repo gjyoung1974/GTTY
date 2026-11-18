@@ -18,6 +18,7 @@ nav_order: 16
 | **Ctrl+M** | Modem-only view: hide or show the band buttons, macros and log row |
 | **Ctrl+,** | Preferences |
 | **Ctrl+F1** | Open this manual in a browser |
+| **Ctrl+Q**, **Ctrl+W**, **Alt+F4** | Quit gtty: aborts any transmission and saves the settings, as the window's close button does |
 
 ## Mouse
 
