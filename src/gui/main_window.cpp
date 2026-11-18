@@ -2643,11 +2643,19 @@ struct RpcCall {
 }  // namespace
 
 void MainWindow::openRpc() {
+  // Called whenever settings are applied (Preferences closing, profile switch). Restart the
+  // server only if its own settings changed: stopping it drops the clients' connections, and
+  // a request in flight then waits for this (main) thread, which is waiting in stop() for the
+  // server thread, until the request times out with "gtty did not respond" (issue #67).
+  std::string at = settings_.rpcEnabled ? settings_.rpcBind + ":" + std::to_string(settings_.rpcPort) : "";
+  if (at == rpcOpenAt_ && rpc_.running() == !at.empty()) return;
   rpc_.stop();
-  if (!settings_.rpcEnabled) return;
+  rpcOpenAt_.clear();
+  if (at.empty()) return;
   rpc_.setHandler([this](const std::string& m, const std::vector<xmlrpc::Value>& p) { return rpcHandler(m, p); });
   std::string err;
   if (!rpc_.start(settings_.rpcBind, static_cast<uint16_t>(settings_.rpcPort), err)) toast("XML-RPC: " + err);
+  else rpcOpenAt_ = at;
 }
 
 xmlrpc::Value MainWindow::rpcHandler(const std::string& method, const std::vector<xmlrpc::Value>& params) {
