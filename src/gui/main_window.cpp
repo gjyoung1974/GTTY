@@ -257,8 +257,12 @@ GtkWidget* MainWindow::buildScopeColumn() {
   afcLabel_ = gtk_label_new("AFC 0 Hz");
   gtk_widget_add_css_class(afcLabel_, "caption");
   gtk_box_append(GTK_BOX(col), afcLabel_);
-  qualityBar_ = gtk_level_bar_new();
-  gtk_widget_set_tooltip_text(qualityBar_, "Decoder signal quality");
+  // Quality bar with the squelch gate drawn on it: both are on the same 0..1 scale, so the
+  // operator sees where the slider sits against the signal. Green fill = text passes; grey = muted.
+  qualityBar_ = gtk_drawing_area_new();
+  gtk_drawing_area_set_content_height(GTK_DRAWING_AREA(qualityBar_), 10);
+  gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(qualityBar_), drawQuality, this, nullptr);
+  updateQualityTooltip();
   gtk_box_append(GTK_BOX(col), qualityBar_);
   levelBar_ = gtk_level_bar_new();
   gtk_level_bar_add_offset_value(GTK_LEVEL_BAR(levelBar_), GTK_LEVEL_BAR_OFFSET_HIGH, 0.9);
@@ -296,7 +300,70 @@ GtkWidget* MainWindow::buildScopeColumn() {
   gtk_widget_set_tooltip_text(levelBar_, "Audio input level");
   gtk_box_append(GTK_BOX(col), levelBar_);
   gtk_box_append(GTK_BOX(col), rigCtlBox_);
+  // Squelch sits under the rig filter controls but outside rigCtlBox_, so it stays usable without a rig.
+  {
+    GtkWidget* r = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+    GtkWidget* l = gtk_label_new("Squelch");
+    gtk_widget_add_css_class(l, "caption");
+    gtk_label_set_xalign(GTK_LABEL(l), 0.f);
+    gtk_box_append(GTK_BOX(r), l);
+    squelchScale_ = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, 1, 0.02);
+    gtk_widget_set_hexpand(squelchScale_, TRUE);
+    gtk_scale_set_draw_value(GTK_SCALE(squelchScale_), FALSE);
+    gtk_widget_set_tooltip_text(squelchScale_, "Mute decoder output below this signal quality; fully left is off");
+    g_signal_connect(squelchScale_, "value-changed", G_CALLBACK(onControlChanged), this);
+    gtk_box_append(GTK_BOX(r), squelchScale_);
+    gtk_box_append(GTK_BOX(col), r);
+  }
   return col;
+}
+
+void MainWindow::drawQuality(GtkDrawingArea* area, cairo_t* cr, int w, int h, gpointer p) {
+  auto* self = static_cast<MainWindow*>(p);
+  GdkRGBA fg;
+  gtk_widget_get_color(GTK_WIDGET(area), &fg);
+  const double r = 3;
+  auto rounded = [&](double x0, double width) {
+    cairo_new_sub_path(cr);
+    cairo_arc(cr, x0 + width - r, r, r, -M_PI / 2, 0);
+    cairo_arc(cr, x0 + width - r, h - r, r, 0, M_PI / 2);
+    cairo_arc(cr, x0 + r, h - r, r, M_PI / 2, M_PI);
+    cairo_arc(cr, x0 + r, r, r, M_PI, 3 * M_PI / 2);
+    cairo_close_path(cr);
+  };
+  // Trough, then clip so the fill and gate stay inside its rounded ends.
+  rounded(0, w);
+  cairo_set_source_rgba(cr, fg.red, fg.green, fg.blue, 0.15);
+  cairo_fill_preserve(cr);
+  cairo_clip(cr);
+  const float gate = self->settings_.squelch;
+  const bool open = gate <= 0 || !self->squelched_;
+  // The region below the gate is shaded: a signal whose fill ends in it is muted.
+  if (gate > 0) {
+    cairo_set_source_rgba(cr, 0.82, 0.13, 0.13, 0.18);
+    cairo_rectangle(cr, 0, 0, gate * w, h);
+    cairo_fill(cr);
+  }
+  if (open) cairo_set_source_rgb(cr, 0.16, 0.62, 0.16);
+  else cairo_set_source_rgba(cr, fg.red, fg.green, fg.blue, 0.45);
+  cairo_rectangle(cr, 0, 0, self->quality_ * w, h);
+  cairo_fill(cr);
+  if (gate > 0) {
+    double x = std::round(gate * w) - 1;
+    cairo_set_source_rgb(cr, 0.82, 0.13, 0.13);
+    cairo_rectangle(cr, x, 0, 2, h);
+    cairo_fill(cr);
+  }
+}
+
+void MainWindow::updateQualityTooltip() {
+  char buf[160];
+  if (settings_.squelch <= 0)
+    snprintf(buf, sizeof buf, "Decoder signal quality %.2f (squelch off)", quality_);
+  else
+    snprintf(buf, sizeof buf, "Decoder signal quality %.2f, squelch gate %.2f (red line): %s", quality_,
+             settings_.squelch, squelched_ ? "muted" : "passing");
+  setTooltipIfChanged(qualityBar_, buf);
 }
 
 GtkWidget* MainWindow::buildRxPanes() {
@@ -559,12 +626,12 @@ GtkWidget* MainWindow::buildLogRow() {
 }
 
 GtkWidget* MainWindow::buildControlRow() {
-  // The controls come in four groups that wrap onto further lines when the window is
+  // The controls come in three groups that wrap onto further lines when the window is
   // narrower than all of them side by side, so the row never sets the window's width.
   GtkWidget* flow = gtk_flow_box_new();
   gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(flow), GTK_SELECTION_NONE);
   gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(flow), 1);
-  gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(flow), 4);
+  gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(flow), 3);
   gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flow), 8);
   gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flow), 2);
   gtk_widget_add_css_class(flow, "control-row");
@@ -659,14 +726,6 @@ GtkWidget* MainWindow::buildControlRow() {
     self->setAutoCq(gtk_check_button_get_active(b));
   }), this);
   gtk_box_append(GTK_BOX(row), autoCqCheck_);
-
-  group();
-  gtk_box_append(GTK_BOX(row), gtk_label_new("Squelch"));
-  squelchScale_ = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, 1, 0.02);
-  gtk_widget_set_size_request(squelchScale_, 140, -1);
-  gtk_scale_set_draw_value(GTK_SCALE(squelchScale_), FALSE);
-  g_signal_connect(squelchScale_, "value-changed", G_CALLBACK(onControlChanged), this);
-  gtk_box_append(GTK_BOX(row), squelchScale_);
   return flow;
 }
 
@@ -917,6 +976,8 @@ void MainWindow::onControlChanged(GtkWidget*, gpointer p) {
   self->settings_.autoRx = gtk_check_button_get_active(GTK_CHECK_BUTTON(self->autoRxCheck_));
   self->settings_.squelch = static_cast<float>(gtk_range_get_value(GTK_RANGE(self->squelchScale_)));
   self->applyRttyParams(false);
+  gtk_widget_queue_draw(self->qualityBar_);
+  self->updateQualityTooltip();
   self->suppressControlEvents_ = true;
   gtk_drop_down_set_selected(GTK_DROP_DOWN(self->tonesDrop_), tonePresetIndex(self->settings_.rtty.markFreq, self->settings_.rtty.spaceFreq()));
   self->suppressControlEvents_ = false;
@@ -1040,7 +1101,10 @@ void MainWindow::handle(const Event& e) {
       char buf[64];
       snprintf(buf, sizeof buf, "AFC %+.0f Hz%s", std::round(st->status.afcOffsetHz) + 0.0, st->status.squelched ? "  SQL" : "");
       gtk_label_set_text(GTK_LABEL(afcLabel_), buf);
-      gtk_level_bar_set_value(GTK_LEVEL_BAR(qualityBar_), std::clamp(st->status.quality, 0.f, 1.f));
+      quality_ = std::clamp(st->status.quality, 0.f, 1.f);
+      squelched_ = st->status.squelched;
+      gtk_widget_queue_draw(qualityBar_);
+      updateQualityTooltip();
       scope_.setLevels(st->status.markLevel, st->status.spaceLevel);
       const RttyParams active = activeRtty();
       wf_.setTones(active.markFreq + primaryAfc_, active.spaceFreq() + primaryAfc_);

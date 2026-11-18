@@ -287,7 +287,11 @@ class MainWindow {
   Waterfall wf_;
   XyScope scope_;
   GtkWidget* afcLabel_ = nullptr;
-  GtkWidget* qualityBar_ = nullptr;
+  GtkWidget* qualityBar_ = nullptr;   // drawing area: quality fill with the squelch gate marked
+  float quality_ = 0.f;
+  bool squelched_ = false;
+  static void drawQuality(GtkDrawingArea*, cairo_t*, int w, int h, gpointer self);
+  void updateQualityTooltip();
   GtkWidget* levelBar_ = nullptr;
   GtkWidget* statusLabel_ = nullptr;
   std::vector<GtkWidget*> rxViews_;
