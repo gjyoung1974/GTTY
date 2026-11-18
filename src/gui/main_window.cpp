@@ -314,7 +314,8 @@ GtkWidget* MainWindow::buildRxPanes() {
   modeDrops_.assign(engines, nullptr);
   // Layout: the best-guess pane full width on top, the engine panes side by
   // side beneath it (the way contesters run MMTTY and 2Tone next to each other).
-  GtkWidget* engineRow = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+  // Preferences can put the best guess below them instead (applyDecoderSettings).
+  GtkWidget* engineRow = engineRow_ = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
   gtk_box_set_homogeneous(GTK_BOX(engineRow), TRUE);
   gtk_widget_set_vexpand(engineRow, TRUE);
   std::vector<size_t> order{static_cast<size_t>(rx_.voteSlot())};
@@ -2048,7 +2049,14 @@ void MainWindow::applyDecoderSettings() {
     rx_.setSlotEnabled(i, d.enabled, d.votes);
     if (rxPanes_[i]) gtk_widget_set_visible(rxPanes_[i], d.enabled && d.show);
   }
-  if (rxPanes_[rx_.voteSlot()]) gtk_widget_set_visible(rxPanes_[rx_.voteSlot()], settings_.showVotePane);
+  if (GtkWidget* vote = rxPanes_[rx_.voteSlot()]) {
+    gtk_widget_set_visible(vote, settings_.showVotePane);
+    GtkWidget* box = gtk_widget_get_parent(vote);
+    if (engineRow_ && box == gtk_widget_get_parent(engineRow_)) {
+      if (settings_.votePaneBelow) gtk_box_reorder_child_after(GTK_BOX(box), vote, engineRow_);
+      else gtk_box_reorder_child_after(GTK_BOX(box), engineRow_, vote);
+    }
+  }
   if (rxPanes_[radioSlot()]) gtk_widget_set_visible(rxPanes_[radioSlot()], settings_.radioDecoderEnabled);
   rx_.setSkimmer(settings_.skimmerEnabled, settings_.waterfallLoHz, settings_.waterfallHiHz, settings_.skimmerStepHz);
   if (skimmerAction_) g_simple_action_set_state(skimmerAction_, g_variant_new_boolean(settings_.skimmerEnabled));

@@ -266,6 +266,7 @@ class MainWindow {
   GtkWidget* skimList_ = nullptr;
   GtkWidget* skimStatus_ = nullptr;
   std::vector<GtkWidget*> rxPanes_;          // per text slot (engines, the vote slot, the radio's decoder)
+  GtkWidget* engineRow_ = nullptr;           // the engine panes side by side; the best-guess pane goes above or below it
   std::vector<GtkWidget*> modeDrops_;        // per bank slot; null where the engine has no modes
   GtkWidget* bandMapBox_ = nullptr;
   bool modemSidebar_ = false;    // sidebar opened by hand while in the modem-only view (not saved)
