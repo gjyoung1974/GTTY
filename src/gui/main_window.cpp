@@ -312,9 +312,9 @@ GtkWidget* MainWindow::buildRxPanes() {
   rxBreaks_.assign(n, LineBreaks{});
   rxPanes_.assign(n, nullptr);
   modeDrops_.assign(engines, nullptr);
-  // Layout: the best-guess pane full width on top, the engine panes side by
-  // side beneath it (the way contesters run MMTTY and 2Tone next to each other).
-  // Preferences can put the best guess below them instead (applyDecoderSettings).
+  // Layout: the engine panes side by side (the way contesters run MMTTY and 2Tone
+  // next to each other), the best-guess pane full width under them; Preferences can
+  // put it above them instead (applyDecoderSettings sets the order).
   GtkWidget* engineRow = engineRow_ = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
   gtk_box_set_homogeneous(GTK_BOX(engineRow), TRUE);
   gtk_widget_set_vexpand(engineRow, TRUE);
@@ -2053,8 +2053,8 @@ void MainWindow::applyDecoderSettings() {
     gtk_widget_set_visible(vote, settings_.showVotePane);
     GtkWidget* box = gtk_widget_get_parent(vote);
     if (engineRow_ && box == gtk_widget_get_parent(engineRow_)) {
-      if (settings_.votePaneBelow) gtk_box_reorder_child_after(GTK_BOX(box), vote, engineRow_);
-      else gtk_box_reorder_child_after(GTK_BOX(box), engineRow_, vote);
+      if (settings_.votePaneAbove) gtk_box_reorder_child_after(GTK_BOX(box), engineRow_, vote);
+      else gtk_box_reorder_child_after(GTK_BOX(box), vote, engineRow_);
     }
   }
   if (rxPanes_[radioSlot()]) gtk_widget_set_visible(rxPanes_[radioSlot()], settings_.radioDecoderEnabled);

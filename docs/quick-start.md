@@ -33,7 +33,7 @@ See [Rig control](rig-control.md) for the details and an FT-710 example.
 
 Tune the rig to the RTTY segment of a band (the **Band** buttons do this; 20 m is 14080 kHz by default). RTTY signals appear on the waterfall as two parallel lines 170 Hz apart.
 
-Click on a signal, between its two lines. The shaded tone window moves there, AFC pulls the decoder onto the tones, the XY scope shows the two crossed ellipses, and text appears in the **Best guess** pane and in the engine panes beneath it.
+Click on a signal, between its two lines. The shaded tone window moves there, AFC pulls the decoder onto the tones, the XY scope shows the two crossed ellipses, and text appears in the engine panes and in the **Best guess** pane beneath them.
 
 Right-click a signal instead to retune the rig so the signal lands exactly on the nominal tones (2125 / 2295 Hz by default).
 

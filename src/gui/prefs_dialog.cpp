@@ -33,7 +33,7 @@ struct Prefs {
   GtkWidget *cbProvider, *cbUser, *cbPass, *cbAutoFill;
   struct DecRows { GtkWidget *enabled = nullptr, *show = nullptr, *votes = nullptr, *mode = nullptr, *filterBits = nullptr, *window = nullptr, *atcTau = nullptr; };
   std::vector<DecRows> dec;
-  GtkWidget *showVote, *voteBelow, *skimmer, *skimmerStep, *skimmerCalls, *radioDec, *radioDecDevice, *radioDecBaud;
+  GtkWidget *showVote, *voteAbove, *skimmer, *skimmerStep, *skimmerCalls, *radioDec, *radioDecDevice, *radioDecBaud;
   GtkWidget *baud, *mark, *space, *preset, *stopBits, *variant, *uos, *afcRange, *netTx, *followSideband;
   bool applyingPreset = false;
   GtkWidget *txMethod, *fskDevice, *fskInvert, *diddle, *afskLevel, *pttViaRig, *txMode, *preamble, *pttLead;
@@ -302,7 +302,7 @@ gboolean onCloseRequest(GtkWindow*, gpointer p) {
     if (r.atcTau) d.atcTau = value(r.atcTau);
   }
   s.showVotePane = active(pr->showVote);
-  s.votePaneBelow = active(pr->voteBelow);
+  s.votePaneAbove = active(pr->voteAbove);
   s.skimmerEnabled = active(pr->skimmer);
   s.skimmerStepHz = value(pr->skimmerStep);
   s.skimmerWaterfallCalls = active(pr->skimmerCalls);
@@ -528,8 +528,8 @@ void showPrefsDialog(GtkWidget* parent, Settings& s, std::function<void()> onApp
     GtkWidget* gv = group(pg, "Best guess");
     pr->showVote = toggle(gv, "Show the merged best-guess pane", s.showVotePane,
                           "Each character is decided by a confidence-weighted vote of the engines; this pane also feeds GridTracker, XML-RPC and the session file");
-    pr->voteBelow = toggle(gv, "Put it below the engine panes", s.votePaneBelow,
-                           "Off: full width above the engine panes. On: under them, for reading the engines first");
+    pr->voteAbove = toggle(gv, "Put it above the engine panes", s.votePaneAbove,
+                           "Off: full width under the engine panes. On: above them");
     GtkWidget* gs = group(pg, "Skimmer");
     pr->skimmer = toggle(gs, "Decode the whole passband", s.skimmerEnabled,
                          "A decoder every step across the waterfall range; stations appear in the Skimmer list of the sidebar. Uses CPU");

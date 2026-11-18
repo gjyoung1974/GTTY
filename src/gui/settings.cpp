@@ -293,7 +293,7 @@ bool Settings::loadFrom(const std::string& path) {
     d.votes = boolean(kf, "decoders", ("votes_" + k).c_str(), d.votes);
   }
   showVotePane = boolean(kf, "decoders", "show_vote", showVotePane);
-  votePaneBelow = boolean(kf, "decoders", "vote_below", votePaneBelow);
+  votePaneAbove = boolean(kf, "decoders", "vote_above", votePaneAbove);
   skimmerEnabled = boolean(kf, "decoders", "skimmer", skimmerEnabled);
   skimmerStepHz = dbl(kf, "decoders", "skimmer_step", skimmerStepHz);
   skimmerWaterfallCalls = boolean(kf, "decoders", "skimmer_waterfall_calls", skimmerWaterfallCalls);
@@ -431,7 +431,7 @@ bool Settings::saveTo(const std::string& path) const {
     g_key_file_set_boolean(kf, "decoders", ("votes_" + k).c_str(), d.votes);
   }
   g_key_file_set_boolean(kf, "decoders", "show_vote", showVotePane);
-  g_key_file_set_boolean(kf, "decoders", "vote_below", votePaneBelow);
+  g_key_file_set_boolean(kf, "decoders", "vote_above", votePaneAbove);
   g_key_file_set_boolean(kf, "decoders", "skimmer", skimmerEnabled);
   g_key_file_set_double(kf, "decoders", "skimmer_step", skimmerStepHz);
   g_key_file_set_boolean(kf, "decoders", "skimmer_waterfall_calls", skimmerWaterfallCalls);
