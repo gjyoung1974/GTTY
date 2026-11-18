@@ -44,7 +44,7 @@ To the right of the waterfall:
 
 ## Receive panes
 
-The **Best guess** pane spans the full width. Each character in it is decided by a confidence-weighted vote of the decoder engines. The engine panes sit side by side beneath it, one per enabled engine with its pane switched on in *Preferences → Decoders*. The two matched-filter engines have a mode dropdown (Normal, Selective, Flutter, Custom) in their pane header.
+The **Best guess** pane spans the full width. Each character in it is decided by a confidence-weighted vote of the decoder engines. The engine panes sit side by side beneath it, one per enabled engine with its pane switched on in *Preferences → Decoders*. To read the engines first, *Preferences → Decoders → Put it below the engine panes* moves the Best guess pane under them. The two matched-filter engines have a mode dropdown (Normal, Selective, Flutter, Custom) in their pane header.
 
 Colors in the text:
 
