@@ -327,6 +327,7 @@ class MainWindow {
   std::string rxTextLog_;        // all primary-decoder text, for XML-RPC text.get_rx
   std::vector<double> notches_;
   xmlrpc::Server rpc_;
+  std::string rpcOpenAt_;                     // "bind:port" rpc_ is serving, so openRpc() leaves it be when unchanged
   RecordForwarder fllog_;
   RecordForwarder xlog_{xlogSend};
   SpotServer spotServer_;
