@@ -20,7 +20,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config \
             libgtk-4-dev libadwaita-1-dev libhamlib-dev portaudio19-dev libfftw3-dev \
-            libsamplerate0-dev libsndfile1-dev libsqlite3-dev libcurl4-openssl-dev libcodec2-dev
+            libsamplerate0-dev libsndfile1-dev libsqlite3-dev libcurl4-openssl-dev libcodec2-dev libpulse-dev
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
       - name: Build
@@ -93,7 +93,7 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config file \
             dpkg-dev libgtk-4-dev libadwaita-1-dev libhamlib-dev portaudio19-dev libfftw3-dev \
-            libsamplerate0-dev libsndfile1-dev libsqlite3-dev libcurl4-openssl-dev libcodec2-dev
+            libsamplerate0-dev libsndfile1-dev libsqlite3-dev libcurl4-openssl-dev libcodec2-dev libpulse-dev
       - name: Configure and build
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGTTY_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr
@@ -131,7 +131,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config \
             libgtk-4-dev libadwaita-1-dev portaudio19-dev libfftw3-dev libsamplerate0-dev \
-            libsndfile1-dev libsqlite3-dev libcurl4-openssl-dev libcodec2-dev libusb-1.0-0-dev curl file libgdk-pixbuf2.0-dev \
+            libsndfile1-dev libsqlite3-dev libcurl4-openssl-dev libcodec2-dev libpulse-dev libusb-1.0-0-dev curl file libgdk-pixbuf2.0-dev \
             libglib2.0-dev-bin librsvg2-common adwaita-icon-theme
       - name: Install optional runtime extras for bundling
         run: |

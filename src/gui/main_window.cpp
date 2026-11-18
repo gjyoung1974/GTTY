@@ -838,15 +838,16 @@ void MainWindow::applyCss() {
 
 void MainWindow::openAudio() {
   auto devices = AudioEngine::listDevices();
-  auto find = [&](const std::string& name, bool input) {
-    if (name.empty()) return -1;
-    for (const auto& d : devices)
-      if (d.name == name && (input ? d.maxInputs > 0 : d.maxOutputs > 0)) return d.index;
-    return -1;
+  // Finds the saved device. If it was found under a new ALSA card number, that name is saved;
+  // a hw: device reached through the sound server only while PortAudio can't list it is not.
+  auto find = [&](std::string& name, bool input) {
+    const AudioDeviceInfo* d = findAudioDevice(devices, name, input);
+    if (d && d->serverNode.empty()) name = d->name;
+    return d;
   };
-  // Name the device in messages: the configured one, or what "system default" resolved to.
-  auto describe = [](int index, const std::string& configured) {
-    return index >= 0 ? "\"" + configured + "\"" : std::string("the system default device");
+  // Name the device in messages as Preferences does, or what "system default" resolved to.
+  auto describe = [](const AudioDeviceInfo* d, bool input) {
+    return d ? "\"" + d->label(input) + "\"" : std::string("the system default device");
   };
   bool anyInput = false, anyOutput = false;
   for (const auto& d : devices) { anyInput |= d.maxInputs > 0; anyOutput |= d.maxOutputs > 0; }
@@ -856,24 +857,24 @@ void MainWindow::openAudio() {
   engine_.closeInput();
   engine_.closeOutput();
 
-  int inIdx = find(settings_.inputDevice, true);
+  const AudioDeviceInfo* in = find(settings_.inputDevice, true);
   if (!anyInput) {
     problem = "No audio input devices found. Nothing can be decoded until one is available.";
-  } else if (!engine_.openInput(inIdx, 0, settings_.inputChannel, err)) {
-    problem = "Audio input failed on " + describe(inIdx, settings_.inputDevice) + ": " + err +
+  } else if (!engine_.openInput(in ? in->index : -1, 0, settings_.inputChannel, err, in ? in->serverNode : "")) {
+    problem = "Audio input failed on " + describe(in, true) + ": " + err +
               ". Nothing is being decoded.";
-  } else if (!settings_.inputDevice.empty() && inIdx < 0) {
+  } else if (!settings_.inputDevice.empty() && !in) {
     toast("Audio input device \"" + settings_.inputDevice + "\" not found; using the system default");
   }
 
-  int outIdx = find(settings_.outputDevice, false);
+  const AudioDeviceInfo* out = find(settings_.outputDevice, false);
   if (!anyOutput) {
     if (problem.empty()) problem = "No audio output devices found. AFSK transmit and the monitor are unavailable.";
-  } else if (!engine_.openOutput(outIdx, 0, err)) {
+  } else if (!engine_.openOutput(out ? out->index : -1, 0, err, out ? out->serverNode : "")) {
     if (problem.empty())
-      problem = "Audio output failed on " + describe(outIdx, settings_.outputDevice) + ": " + err +
+      problem = "Audio output failed on " + describe(out, false) + ": " + err +
                 ". AFSK transmit and the monitor are unavailable.";
-  } else if (!settings_.outputDevice.empty() && outIdx < 0) {
+  } else if (!settings_.outputDevice.empty() && !out) {
     toast("Audio output device \"" + settings_.outputDevice + "\" not found; using the system default");
   }
   if (!problem.empty())

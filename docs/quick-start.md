@@ -15,7 +15,7 @@ Choose the appearance (follow system, light or dark) on the same page if you lik
 
 ## 2. Audio
 
-On **Preferences → Audio** pick the input device that carries receive audio from the rig and the output device that feeds its transmit audio. The list shows every PortAudio device; on Linux, a USB sound card's entries also say what each one is wired to (*Mic*, *Line*, *Speaker*, *S/PDIF* ...) and who made the card, so two "USB Audio" devices can be told apart. Leave both on *(default)* to use the system's default devices.
+On **Preferences → Audio** pick the input device that carries receive audio from the rig and the output device that feeds its transmit audio. On Linux the list starts with the sound cards as PipeWire or PulseAudio offers them, named as in the desktop's sound settings and pavucontrol: the device's name (including any you gave it in a WirePlumber rule), the port in use (*Microphone*, *Speakers*, *Line In* ...) and who made the card, e.g. *USB Audio Device Mono — Microphone (C-Media Electronics, Inc.)*. These work while other programs use the same card, and GTTY finds them again when Linux numbers the cards differently after a reboot or a replug. A port with nothing plugged into its jack says *unplugged*. Below them are PortAudio's own devices; the ones ending in *(hw:C,D)* open the card directly, bypassing the sound server, and are only listed while no other program has the card open. Leave both on *(default)* to use the system's default devices.
 
 If the receive audio only arrives on one channel of a stereo input, set **Input channel** to Left or Right; *Mix* averages both.
 

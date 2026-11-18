@@ -65,7 +65,7 @@ On macOS no group membership is needed; `/dev/cu.*` is accessible to everyone. S
 sudo apt install build-essential cmake ninja-build pkg-config \
      libgtk-4-dev libadwaita-1-dev libhamlib-dev portaudio19-dev \
      libfftw3-dev libsamplerate0-dev libsndfile1-dev libsqlite3-dev \
-     libcurl4-openssl-dev libcodec2-dev
+     libcurl4-openssl-dev libcodec2-dev libpulse-dev
 git clone https://github.com/gjyoung1974/GTTY.git gtty
 cd gtty
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -100,12 +100,13 @@ packaging/build-macos-app.sh
 
 ### Optional dependencies
 
-Two dependencies are optional:
+Three dependencies are optional:
 
 | Debian / Ubuntu | macOS | What it adds |
 |---|---|---|
 | `libcurl4-openssl-dev` | in the SDK, nothing to install | Callbook lookups (QRZ.com XML, HamQTH) |
 | `libcodec2-dev` | `brew install codec2` | The libcodec2 FSK comparison decoder |
+| `libpulse-dev` | not used | Sound cards listed under the names PipeWire or PulseAudio give them (the names in pavucontrol) |
 
 Without them gtty builds and runs; the matching features show a note in Preferences.
 
