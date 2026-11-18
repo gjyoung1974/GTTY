@@ -746,7 +746,7 @@ void MainWindow::installActions() {
   static const char* names[] = {"prefs", "reset-afc", "clear-rx", "export-adif", "about",
                                 "log-qso", "clear-qso", "abort-tx", "start-tx", "stop-tx", "clear-notches",
                                 "clear-text", "profile-clone", "profile-rename", "profile-delete",
-                                "profile-reset", "cw-id", "help", "other-shift", nullptr};
+                                "profile-reset", "cw-id", "help", "other-shift", "close", nullptr};
   for (int i = 0; names[i]; ++i) {
     GSimpleAction* a = g_simple_action_new(names[i], nullptr);
     g_signal_connect(a, "activate", G_CALLBACK(onAction), this);
@@ -784,6 +784,9 @@ void MainWindow::installActions() {
   // Plain F1 runs a macro, so Help takes Ctrl+F1.
   const char* helpAccels[] = {"<Control>F1", nullptr};
   gtk_application_set_accels_for_action(app, "win.help", helpAccels);
+  // Alt+F4 is usually the window manager's, but not every desktop binds it.
+  const char* closeAccels[] = {"<Control>q", "<Control>w", "<Alt>F4", nullptr};
+  gtk_application_set_accels_for_action(app, "win.close", closeAccels);
 }
 
 void MainWindow::installShortcuts() {
@@ -1222,7 +1225,10 @@ void MainWindow::updateFreqDisplay(const RigState& s) {
 RxHighlightContext MainWindow::highlightContext() const {
   RxHighlightContext c;
   c.myCall = settings_.myCall;
-  if (callEntry_) c.wantedCall = gtk_editable_get_text(GTK_EDITABLE(callEntry_));
+  if (callEntry_) {
+    const char* call = gtk_editable_get_text(GTK_EDITABLE(callEntry_));
+    if (call) c.wantedCall = call;
+  }
   if (scp_.loaded()) c.scp = &scp_;
   return c;
 }
@@ -1781,7 +1787,9 @@ void MainWindow::toast(const std::string& msg) {
 void MainWindow::onAction(GSimpleAction* a, GVariant*, gpointer p) {
   auto* self = static_cast<MainWindow*>(p);
   std::string name = g_action_get_name(G_ACTION(a));
-  if (name == "prefs") {
+  if (name == "close") {
+    gtk_window_close(GTK_WINDOW(self->window_));   // through onCloseRequest, as the title-bar X
+  } else if (name == "prefs") {
     showPrefsDialog(self->window_, self->settings_, [self] {
       self->settings_.save();
       self->applySettings();
@@ -2737,7 +2745,11 @@ xmlrpc::Value MainWindow::rpcHandler(const std::string& method, const std::vecto
   auto fut = call->promise.get_future();
   g_idle_add_full(G_PRIORITY_DEFAULT, +[](gpointer p) -> gboolean {
     auto* c = static_cast<RpcCall*>(p);
-    try { c->promise.set_value((c->self->*(c->dispatch))(c->method, c->params)); }
+    try {
+      // A logger's request that arrives while the window is closing must not touch widgets.
+      if (c->self->closing_) throw std::runtime_error("gtty is closing");
+      c->promise.set_value((c->self->*(c->dispatch))(c->method, c->params));
+    }
     catch (...) { c->promise.set_exception(std::current_exception()); }
     delete c;
     return G_SOURCE_REMOVE;
@@ -3098,6 +3110,12 @@ gboolean MainWindow::onCloseRequest(GtkWindow*, gpointer p) {
   auto* self = static_cast<MainWindow*>(p);
   self->settings_.save();
   self->tx_.abortTx();
+  // The window and its widgets are destroyed when this returns, but the main loop keeps
+  // running until the application notices it has no window left. A tick in between would
+  // hand received text to widgets that are gone (issue #73), so stop the timers now.
+  self->closing_ = true;
+  if (self->tickId_) { g_source_remove(self->tickId_); self->tickId_ = 0; }
+  if (self->callLookupId_) { g_source_remove(self->callLookupId_); self->callLookupId_ = 0; }
   return FALSE;
 }
 

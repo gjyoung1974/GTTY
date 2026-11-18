@@ -360,6 +360,9 @@ class MainWindow {
   std::vector<GtkWidget*> macroButtons_;
   std::vector<GtkWidget*> bandButtons_;
   guint tickId_ = 0;
+  // Set once the window is closing: its widgets are about to be destroyed, so nothing
+  // queued on the main loop may touch them any more.
+  bool closing_ = false;
 };
 
 }  // namespace gtty
