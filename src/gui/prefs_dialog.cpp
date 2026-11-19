@@ -632,8 +632,8 @@ void showPrefsDialog(GtkWidget* parent, Settings& s, std::function<void()> onApp
     pr->clHost = entry(g, "Host (for example dxc.nc7j.com, dxspider.co.uk, ve7cc.net)", s.clusterHost);
     pr->clPort = spin(g, "Port (DXSpider 7300, AR-Cluster 7373, CC Cluster 23)", 1, 65535, 1, s.clusterPort);
     pr->clLogin = entry(g, "Login callsign (blank = station callsign)", s.clusterLogin);
-    pr->clCommands = entry(g, "Commands after login, separated by ';'", s.clusterCommands);
-    adw_action_row_set_subtitle(ADW_ACTION_ROW(pr->clCommands), "For example: set/filter doc/pass rtty ; sh/dx 20");
+    // An entry row is not an action row and has no subtitle, so the example goes in the title.
+    pr->clCommands = entry(g, "Commands after login, separated by ';' (for example set/filter doc/pass rtty ; sh/dx 20)", s.clusterCommands);
     GtkWidget* g2 = group(pg, "Band map");
     pr->clRttyOnly = toggle(g2, "RTTY spots only", s.clusterRttyOnly, "Comment mentions RTTY, or no other mode is named and the frequency is in a digital segment");
     pr->clThisBand = toggle(g2, "Current band only", s.bandMapThisBand);
