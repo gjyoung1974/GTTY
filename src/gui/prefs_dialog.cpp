@@ -589,7 +589,7 @@ void showPrefsDialog(GtkWidget* parent, Settings& s, std::function<void()> onApp
     pr->cwIdText = entry(g6, "ID text (blank = callsign)", s.tx.cwIdText);
     pr->cwIdWpm = spin(g6, "Speed (WPM)", 5, 40, 1, s.tx.cwIdWpm);
     pr->cwIdTone = spin(g6, "AFSK tone (Hz, 0 = mark tone)", 0, 3000, 25, s.tx.cwIdToneHz);
-    adw_action_row_set_subtitle(ADW_ACTION_ROW(pr->cwIdTone), "With FSK or CAT keying the ID is sent by keying PTT, which carries the mark tone; also available from the menu and the <CWID> macro tag");
+    adw_action_row_set_subtitle(ADW_ACTION_ROW(pr->cwIdTone), "With FSK or CAT keying the ID is sent by keying PTT, which carries the mark tone; also available from the menu and the &lt;CWID&gt; macro tag");
     GtkWidget* g7 = group(pg, "Tune");
     pr->tuneTimeout = spin(g7, "Tune time-out (s, 0 = until stopped)", 0, 120, 5, s.tx.tuneTimeoutSec);
   }
