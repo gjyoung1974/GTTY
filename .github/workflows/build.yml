@@ -113,6 +113,46 @@ jobs:
           name: gtty-deb-${{ matrix.distro.tag }}-${{ matrix.arch.name }}
           path: build/*.deb
 
+  riscv64:
+    name: Build, test and package (debian13 riscv64, emulated)
+    # GitHub has no riscv64 runners: the build runs in a riscv64 container under QEMU
+    # user emulation, several times slower than the native jobs.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # all tags: the version is taken from git describe
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: riscv64
+      - name: Build, test and package in a riscv64 container
+        run: |
+          docker run --rm --platform linux/riscv64 \
+            -e DEBIAN_FRONTEND=noninteractive \
+            -v "$PWD:/src" -w /src debian:trixie bash -euxc '
+              uname -m
+              apt-get update
+              apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config file git \
+                dpkg-dev libgtk-4-dev libadwaita-1-dev libhamlib-dev portaudio19-dev libfftw3-dev \
+                libsamplerate0-dev libsndfile1-dev libsqlite3-dev libcurl4-openssl-dev libcodec2-dev libpulse-dev
+              cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+              cmake --build build
+              file build/src/cli/gtty-cli | grep -q "RISC-V"
+              # emulation is slow: give each test more than the default time
+              ctest --test-dir build --output-on-failure --timeout 600
+              ./build/src/cli/gtty-cli encode "CQ CQ DE N0CALL K" /tmp/cq.wav
+              ./build/src/cli/gtty-cli decode /tmp/cq.wav | tee /tmp/decoded.txt
+              grep -q "CQ CQ DE N0CALL K" /tmp/decoded.txt
+              cd build && cpack -G DEB
+              for f in gtty_*.deb; do mv "$f" "${f%_*}_debian13_${f##*_}"; done
+              ls -l *.deb
+            '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gtty-riscv64-debian13
+          path: build/*.deb
+
   appimage:
     name: AppImage (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
