@@ -23,7 +23,7 @@ On a PipeWire desktop the `pipewire-alsa` package must be installed, otherwise t
 
 ## AppImage
 
-1. Download `gtty-x86_64.AppImage` or `gtty-aarch64.AppImage` from the releases page.
+1. Download `gtty-x86_64.AppImage`, `gtty-aarch64.AppImage` or `gtty-riscv64.AppImage` (RISC-V 64-bit) from the releases page.
 2. Make it executable and run it:
 
    ```

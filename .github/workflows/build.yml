@@ -206,6 +206,67 @@ jobs:
           name: gtty-appimage-${{ matrix.arch }}
           path: gtty-*.AppImage
 
+  appimage-riscv64:
+    name: AppImage (riscv64, emulated)
+    # No riscv64 runners, and no riscv64 release of linuxdeploy or the AppImage runtime:
+    # the build runs in a riscv64 ubuntu:24.04 container (the base the other AppImages are
+    # built on) under QEMU user emulation, and build-appimage.sh bundles the libraries itself.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # all tags: the version is taken from git describe
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: riscv64
+      - name: Cache the Hamlib 4.6.2 build (slow under emulation)
+        uses: actions/cache@v4
+        with:
+          path: hamlib-riscv64
+          key: hamlib-4.6.2-riscv64-ubuntu24.04-v1
+      - name: Build and smoke test the AppImage in a riscv64 container
+        run: |
+          docker run --rm --platform linux/riscv64 \
+            -e DEBIAN_FRONTEND=noninteractive \
+            -v "$PWD:/src" -w /src ubuntu:24.04 bash -euxc '
+              uname -m
+              apt-get update
+              apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config \
+                ca-certificates curl file git patchelf squashfs-tools \
+                libgtk-4-dev libadwaita-1-dev portaudio19-dev libfftw3-dev libsamplerate0-dev \
+                libsndfile1-dev libsqlite3-dev libcurl4-openssl-dev libcodec2-dev libpulse-dev libusb-1.0-0-dev \
+                libgdk-pixbuf2.0-dev libglib2.0-dev-bin librsvg2-common adwaita-icon-theme
+              # Hamlib 4.6.2 (newer than the distro package; adds recent rigs), as in the other AppImages
+              if [ ! -d hamlib-riscv64/usr ]; then
+                curl -fsSL -o hamlib.tar.gz https://github.com/Hamlib/Hamlib/releases/download/4.6.2/hamlib-4.6.2.tar.gz
+                mkdir hamlib && tar -xzf hamlib.tar.gz -C hamlib --strip-components=1
+                (cd hamlib && ./configure --prefix=/usr --without-cxx-binding --disable-static \
+                  && make -j"$(nproc)" && make install DESTDIR=/src/hamlib-riscv64)
+              fi
+              cp -a hamlib-riscv64/. /
+              ldconfig
+              pkg-config --modversion gtk4 libadwaita-1 hamlib portaudio-2.0 fftw3f samplerate sndfile sqlite3
+              cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGTTY_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr
+              cmake --build build
+              ./packaging/build-appimage.sh
+              # smoke test: the CLI inside the bundle, running against the bundled libraries
+              file gtty-riscv64.AppImage | grep -q "RISC-V"
+              ./gtty-riscv64.AppImage --appimage-extract >/dev/null
+              ldd squashfs-root/usr/bin/gtty | grep "squashfs-root/usr/lib/libgtk-4"
+              ldd squashfs-root/usr/bin/gtty-cli | grep "squashfs-root/usr/lib/libhamlib"
+              ./squashfs-root/usr/bin/gtty-cli rigs "ft-710" | head -2
+              ./squashfs-root/usr/bin/gtty-cli encode "CQ CQ DE N0CALL K" /tmp/cq.wav
+              ./squashfs-root/usr/bin/gtty-cli decode /tmp/cq.wav | tee /tmp/decoded.txt
+              grep -q "CQ CQ DE N0CALL K" /tmp/decoded.txt
+              ls squashfs-root/usr/lib | head -40
+              rm -rf squashfs-root
+            '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gtty-appimage-riscv64
+          path: gtty-*.AppImage
+
   macos-app:
     name: macOS app (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
@@ -249,7 +310,7 @@ jobs:
   release:
     name: Publish release assets
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [test, deb, appimage, macos-app]
+    needs: [test, deb, appimage, appimage-riscv64, macos-app]
     runs-on: ubuntu-latest
     permissions:
       contents: write

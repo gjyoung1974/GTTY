@@ -219,8 +219,8 @@ gtty a different port.
   `default` and `pipewire` audio devices to open; apt pulls it in as a
   recommendation, `dpkg -i` does not. gtty shows a banner across the top of the
   window if its audio input could not be opened.
-- **AppImage**: download `gtty-x86_64.AppImage` or `gtty-aarch64.AppImage`,
-  `chmod +x` it, run. Bundles GTK4, libadwaita and Hamlib 4.6.2.
+- **AppImage**: download `gtty-x86_64.AppImage`, `gtty-aarch64.AppImage` or
+  `gtty-riscv64.AppImage`, `chmod +x` it, run. Bundles GTK4, libadwaita and Hamlib 4.6.2.
 - Packages are produced by `.github/workflows/build.yml` on every push and
   attached to GitHub releases for tags `v*`. Build a `.deb` locally with
   `cd build && cpack -G DEB`; build an AppImage with `packaging/build-appimage.sh`.
