@@ -150,7 +150,7 @@ jobs:
             '
       - uses: actions/upload-artifact@v4
         with:
-          name: gtty-riscv64-debian13
+          name: gtty-deb-debian13-riscv64
           path: build/*.deb
 
   appimage:
@@ -252,7 +252,12 @@ jobs:
               ./packaging/build-appimage.sh
               # smoke test: the CLI inside the bundle, running against the bundled libraries
               file gtty-riscv64.AppImage | grep -q "RISC-V"
-              ./gtty-riscv64.AppImage --appimage-extract >/dev/null
+              # The AppImage cannot be executed here: its "AI" magic sits in the ELF header
+              # padding (bytes 8-10), which the qemu-user binfmt_misc rule requires to be
+              # zero, so the kernel answers "Exec format error". Unpack the SquashFS image
+              # appended to the runtime instead.
+              unsquashfs -q -n -o "$(stat -c %s packaging/tools/uruntime-*-riscv64)" \
+                -d squashfs-root gtty-riscv64.AppImage
               ldd squashfs-root/usr/bin/gtty | grep "squashfs-root/usr/lib/libgtk-4"
               ldd squashfs-root/usr/bin/gtty-cli | grep "squashfs-root/usr/lib/libhamlib"
               ./squashfs-root/usr/bin/gtty-cli rigs "ft-710" | head -2
@@ -310,7 +315,7 @@ jobs:
   release:
     name: Publish release assets
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [test, deb, appimage, appimage-riscv64, macos-app]
+    needs: [test, deb, riscv64, appimage, appimage-riscv64, macos-app]
     runs-on: ubuntu-latest
     permissions:
       contents: write
