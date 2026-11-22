@@ -67,6 +67,31 @@ started.
 - [ ] **Comparative benchmark** against MMTTY and 2Tone on shared off-air
       recordings. `tools/bench_rtty.py --score-file` can already score another
       program's output; the recordings and the numbers are missing.
+- [x] **HF channel simulator and benchmark** (`core/dsp/hf_channel`,
+      `tests/bench_channel.cpp`, `gtty-cli channel`): error rate per engine on
+      the ITU-R F.1487 channels.
+- [x] **The best guess was no better than the Correlator alone** in contest
+      traffic: it printed the noise between transmissions (a carrier coming up
+      made A and B agree on a wrong character; a chance agreement of the two
+      let held noise out) and left no space between them. A and B now count as
+      one witness, a transmission ends after three characters without a sound
+      decision, and a space follows it. `bench_channel --scenario contest`,
+      2026-11-21, 2,200 characters per point: white noise at +6 dB 7.7 % to
+      0.6 % (Correlator 5.8 %); mid-latitude moderate at +6 dB 11.1 % to
+      4.3 % (Correlator 9.4 %). Ahead of the Correlator at 46 of 50 points;
+      behind by 0.3 to 2.4 points at -6 dB on four of the slow-fading channels.
+      Continuous text is unchanged. Needs on-air confirmation.
+- [ ] **In continuous text below 0 dB the best guess is up to three points
+      behind the Correlator** (white noise at -6 dB: 16.9 % against 13.6 %),
+      as it was before. Adding up the engines' soft bits
+      (`Voter::Combine::Soft`, `gtty-cli decode --vote soft`) does not change
+      that; it is not the default.
+- [ ] **Shift errors and stray spaces** are about a third of the best guess's
+      errors on the fading channels at 0 dB (`bench_channel --detail`,
+      mid-latitude moderate: 16.8 % in all, 14.0 % without shift errors,
+      11.2 % without spaces as well). A lost FIGS or LTRS garbles a word; a
+      doubtful character in a fade is taken for the end of a transmission and
+      splits a callsign.
 - [ ] **Maximum-likelihood character decoder** for deep fades, which the
       README names as the next decoder step.
 - [ ] **Contest support**: contest definitions (exchange templates,

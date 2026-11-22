@@ -192,6 +192,7 @@ void MatchedFilterDemod::finishBit(float mean) {
     // quality: how far from the threshold the data bits sit
     quality_ = 0.9f * quality_ + 0.1f * std::min(1.f, std::fabs(mean));
     confSum_ += std::min(1.f, std::fabs(mean));
+    soft_[bit_ - 1] = mean;
     bit_++;
     return;
   }
@@ -205,7 +206,12 @@ void MatchedFilterDemod::finishBit(float mean) {
   chars_++;
   applyAfc();
   bool squelched = cfg_.squelch > 0 && quality_ < cfg_.squelch;
-  if (onCode) onCode(CodeEvent{code_, true, std::min(1.f, confSum_ / 5.f) * (squelched ? 0.f : 1.f), pos_});
+  if (onCode) {
+    CodeEvent e{code_, true, std::min(1.f, confSum_ / 5.f) * (squelched ? 0.f : 1.f), pos_};
+    for (int k = 0; k < 5; ++k) e.soft[k] = squelched ? 0.f : soft_[k];
+    e.hasSoft = true;
+    onCode(e);
+  }
   if (squelched) return;
   auto ch = baudot_.decode(code_);
   if (ch && onChar) onChar(*ch);

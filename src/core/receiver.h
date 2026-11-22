@@ -41,6 +41,8 @@ class Receiver {
   // Skimmer across [loHz, hiHz] in stepHz steps; off when stepHz <= 0.
   void setSkimmer(bool on, double loHz, double hiHz, double stepHz);
   bool skimmerOn() const { return skimmerOn_; }
+  // How the best-guess stream merges the engines: see Voter::Combine.
+  void setVoteCombine(Voter::Combine c) { std::lock_guard<std::mutex> lk(mu_); voter_.setCombine(c); }
   void resetAfc() { std::lock_guard<std::mutex> lk(mu_); bank_.resetAfcAll(); }
   // While transmitting: the audio is ignored and nothing is received. What was decoded
   // before keying is printed at once, ahead of what is sent (issue #47).

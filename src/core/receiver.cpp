@@ -34,6 +34,8 @@ void Receiver::rebuildVoter() {
   hold += static_cast<uint64_t>(0.75 * charSamples);
   voter_.configure(static_cast<int>(bank_.size()), charSamples, hold, cfg_.params.variant, cfg_.params.unshiftOnSpace);
   for (size_t i = 0; i < bank_.size(); ++i) voter_.setVoting(static_cast<int>(i), bank_.slot(i).enabled && bank_.slot(i).votes);
+  // A and B are one decoder with two filters: one witness between them.
+  if (bank_.size() > static_cast<size_t>(kSlotB)) voter_.setWitness(kSlotB, kSlotA);
 }
 
 void Receiver::setSlotEnabled(size_t slot, bool enabled, bool votes) {

@@ -46,6 +46,7 @@ class CorrelatorDemod : public RttyDemodulator {
   cf runChannel(Channel& ch, float x);
   double sum(uint64_t a, uint64_t b) const;        // sum of d over [a, b)
   double sumFreq(uint64_t a, uint64_t b) const;    // sum of instantaneous frequency error over [a, b)
+  void bitMeans(uint64_t tau, float m[7]) const;   // mean of d over the central 60 % of each bit
   bool evaluate(uint64_t tau, uint8_t& code, float& score, float& start, float& stop) const;
   void search();
   void accept(uint64_t tau, uint8_t code, float score);

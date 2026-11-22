@@ -1,4 +1,4 @@
-foreach(t test_baudot test_modem test_macros test_callsign test_wsjtx test_xmlrpc test_sockets test_cluster test_callbook test_cw test_voter test_codec2 test_skimmer test_spots test_pskreporter test_fllog test_xlog test_ptt test_line_breaks test_noise_floor test_rx_highlight test_trailing_noise test_sideband test_rig_decode_port test_rig_width test_rx_during_tx test_serial_ports test_audio_devices)
+foreach(t test_baudot test_modem test_macros test_callsign test_wsjtx test_xmlrpc test_sockets test_cluster test_callbook test_cw test_voter test_codec2 test_skimmer test_spots test_pskreporter test_fllog test_xlog test_ptt test_line_breaks test_noise_floor test_rx_highlight test_trailing_noise test_sideband test_rig_decode_port test_rig_width test_rx_during_tx test_serial_ports test_audio_devices test_hf_channel)
   add_executable(${t} ${t}.cpp)
   target_link_libraries(${t} PRIVATE gttycore)
   add_test(NAME ${t} COMMAND ${t})
@@ -69,3 +69,7 @@ endif()
 # The version every build reports is derived from git; see cmake/GttyVersion.cmake.
 add_test(NAME version_detection
   COMMAND ${CMAKE_COMMAND} -DMOD=${CMAKE_SOURCE_DIR}/cmake/GttyVersion.cmake -P ${CMAKE_CURRENT_SOURCE_DIR}/version_detect_test.cmake)
+
+# Decoder error rates on simulated HF channels: a measurement, not a ctest. See docs/development.md.
+add_executable(bench_channel bench_channel.cpp)
+target_link_libraries(bench_channel PRIVATE gttycore)

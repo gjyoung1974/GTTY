@@ -141,15 +141,19 @@ void CorrelatorDemod::process(const float* in, size_t n) {
 
 // Correlates the character starting at tau with all 32 templates. Returns the
 // best code and its normalized score (mean per-bit correlation, 0..1).
-bool CorrelatorDemod::evaluate(uint64_t tau, uint8_t& code, float& score, float& start, float& stop) const {
+void CorrelatorDemod::bitMeans(uint64_t tau, float m[7]) const {
   // Bit k occupies [tau + k*spb, tau + (k+1)*spb); integrate its central 60 %.
-  float m[7];
   for (int k = 0; k < 7; ++k) {
     uint64_t a = tau + static_cast<uint64_t>((k + 0.2) * spb_);
     uint64_t b = tau + static_cast<uint64_t>((k + 0.8) * spb_);
-    if (b <= a) return false;
-    m[k] = static_cast<float>(sum(a, b) / static_cast<double>(b - a));
+    m[k] = b > a ? static_cast<float>(sum(a, b) / static_cast<double>(b - a)) : 0.f;
   }
+}
+
+bool CorrelatorDemod::evaluate(uint64_t tau, uint8_t& code, float& score, float& start, float& stop) const {
+  if (0.6 * spb_ < 1.0) return false;
+  float m[7];
+  bitMeans(tau, m);
   start = m[0];
   stop = m[6];
   const float edge = static_cast<float>(cfg_.corrEdgeThreshold);
@@ -204,7 +208,14 @@ void CorrelatorDemod::accept(uint64_t tau, uint8_t code, float score) {
   }
   bool squelched = cfg_.squelch > 0 && quality_ < cfg_.squelch;
   uint64_t endSample = tau + static_cast<uint64_t>(7.0 * spb_);
-  if (onCode) onCode(CodeEvent{code, true, squelched ? 0.f : std::min(1.f, score), endSample});
+  if (onCode) {
+    CodeEvent e{code, true, squelched ? 0.f : std::min(1.f, score), endSample};
+    float m[7];
+    bitMeans(tau, m);
+    for (int k = 0; k < 5; ++k) e.soft[k] = squelched ? 0.f : m[k + 1];
+    e.hasSoft = true;
+    onCode(e);
+  }
   if (squelched) return;
   auto ch = baudot_.decode(code);
   if (ch && onChar) onChar(*ch);

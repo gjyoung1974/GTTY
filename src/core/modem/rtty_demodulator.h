@@ -42,6 +42,11 @@ struct CodeEvent {
   bool valid = true;
   float confidence = 0;
   uint64_t sample = 0;
+  // The five data bits as the engine saw them before deciding, on its +-1 scale
+  // (positive = mark, bit 0 first), when hasSoft is set. The voter adds these up
+  // across engines, so one engine sure of a bit outweighs two that barely tipped.
+  float soft[5] = {0, 0, 0, 0, 0};
+  bool hasSoft = false;
 };
 
 struct DemodStatus {

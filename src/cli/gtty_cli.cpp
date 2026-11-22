@@ -3,6 +3,7 @@
 //   gtty-cli decode in.wav [opts]             decode a recording
 //   gtty-cli listen [opts]                    decode live audio to stdout
 //   gtty-cli record out.wav [--seconds N]     capture live audio to a WAV file
+//   gtty-cli channel in.wav out.wav [opts]    pass a recording through a simulated HF channel
 //   gtty-cli devices                          list audio devices
 //   gtty-cli rigs [filter]                    list Hamlib rig models
 //   gtty-cli rig --model N --device DEV       show rig frequency / mode
@@ -12,7 +13,9 @@
 //          --start S --limit S (decode window) --quiet (stats only)
 //          decoder knobs: --filter-bits F --window 0|1 --atc-tau S --bit-window F --afc-gain G
 //                         --mode normal|selective|flutter --engines all --corr-edge F --corr-accept F
+//                         --vote majority|soft
 //          --iq [--center HZ]  treat a stereo file as I/Q baseband (SDR recording)
+//          channel: --profile KEY (list: gtty-cli channel) --snr DB (in 3 kHz; omit for no noise) --seed N
 #include <cctype>
 #include <chrono>
 #include <cstdio>
@@ -25,6 +28,7 @@
 
 #include "core/audio/audio_engine.h"
 #include "core/audio/wav_file.h"
+#include "core/dsp/hf_channel.h"
 #include "core/dsp/resampler.h"
 #include "core/version.h"
 #include "core/events.h"
@@ -48,6 +52,11 @@ struct Opts {
   int mode = -1;              // preset for the matched-filter engines (0 normal, 1 selective, 2 flutter)
   bool allEngines = false;    // enable every engine, including the codec2 comparison decoder
   double corrEdge = -1, corrAccept = -1;
+  bool softVote = false;      // best guess from summed soft bits instead of the majority
+  std::string profile = "mid-moderate";   // channel
+  double snr = 0;
+  bool haveSnr = false;
+  unsigned seed = 1;
   int inDev = -1, outDev = -1;
   std::string inName;         // --in given as a name (as `devices` prints it)
   int model = 1;
@@ -86,6 +95,10 @@ Opts parse(int argc, char** argv) {
     else if (a == "--engines") o.allEngines = next() == "all";
     else if (a == "--corr-edge") o.corrEdge = atof(next().c_str());
     else if (a == "--corr-accept") o.corrAccept = atof(next().c_str());
+    else if (a == "--vote") o.softVote = next() == "soft";
+    else if (a == "--profile") o.profile = next();
+    else if (a == "--snr") { o.snr = atof(next().c_str()); o.haveSnr = true; }
+    else if (a == "--seed") o.seed = static_cast<unsigned>(atoi(next().c_str()));
     else if (a == "--usos") o.params.unshiftOnSpace = true;
     else if (a == "--no-usos") o.params.unshiftOnSpace = false;
     else if (a == "--ustty") o.params.variant = BaudotVariant::USTTY;
@@ -220,6 +233,7 @@ int cmdDecode(const Opts& o) {
   Receiver rx(nullptr, &q);
   rx.configure(demodConfig(o));
   applyFilterOverrides(rx, o);
+  if (o.softVote) rx.setVoteCombine(Voter::Combine::Soft);
   size_t pos = 0;
   std::vector<std::string> text;
   while (pos < samples.size()) {
@@ -291,6 +305,45 @@ int cmdRecord(const Opts& o) {
   return 0;
 }
 
+// A recording through the two-path fading channel, then white noise for the wanted
+// signal-to-noise ratio. The signal power is taken from the parts of the file that are
+// not silent, so the ratio holds while the station is sending.
+int cmdChannel(const Opts& o) {
+  const HfChannelProfile* profile = findHfChannelProfile(o.profile);
+  if (o.positional.size() < 3 || !profile) {
+    std::cerr << "usage: channel in.wav out.wav [--profile KEY] [--snr DB] [--seed N]\nprofiles:\n";
+    for (const auto& p : hfChannelProfiles())
+      std::fprintf(stderr, "  %-15s %s (%.1f ms, %.1f Hz)\n", p.key, p.name, p.delayMs, p.dopplerHz);
+    return 2;
+  }
+  std::vector<float> x;
+  double rate = 0;
+  std::string err;
+  if (!readAudioFile(o.positional[1], x, rate, err)) { std::cerr << err << "\n"; return 1; }
+  float peak = 0;
+  for (float v : x) peak = std::max(peak, std::fabs(v));
+  const size_t block = std::max<size_t>(1, static_cast<size_t>(rate / 100));
+  double power = 0;
+  size_t counted = 0;
+  for (size_t i = 0; i + block <= x.size(); i += block) {
+    double p = 0;
+    for (size_t k = 0; k < block; ++k) p += x[i + k] * x[i + k];
+    if (p / block > 1e-4 * peak * peak) { power += p; counted += block; }
+  }
+  if (counted == 0) { std::cerr << "the file is silent\n"; return 1; }
+  power /= static_cast<double>(counted);
+  std::vector<float> y = applyHfChannel(x, rate, *profile, o.seed);
+  if (o.haveSnr) addWhiteNoise(y, rate, o.snr, o.seed + 1, power);
+  float outPeak = 1e-9f;
+  for (float v : y) outPeak = std::max(outPeak, std::fabs(v));
+  if (outPeak > 0.95f) for (auto& v : y) v *= 0.95f / outPeak;   // fades up and noise must not clip
+  if (!writeWavFile(o.positional[2], y, rate, err)) { std::cerr << err << "\n"; return 1; }
+  std::cout << "wrote " << o.positional[2] << ": " << profile->name;
+  if (o.haveSnr) std::cout << ", " << o.snr << " dB SNR in 3 kHz";
+  std::cout << "\n";
+  return 0;
+}
+
 int cmdDevices() {
   for (const auto& d : AudioEngine::listDevices()) {
     // The sound server's devices share PortAudio's "pipewire"/"pulse" index: pick them by name.
@@ -352,7 +405,7 @@ int main(int argc, char** argv) {
     return 2;
   }
   if (o.positional.empty()) {
-    std::cerr << "usage: gtty-cli encode|decode|listen|devices|rigs|rig [options] | --version\n";
+    std::cerr << "usage: gtty-cli encode|decode|listen|record|channel|devices|rigs|rig [options] | --version\n";
     return 2;
   }
   const std::string& cmd = o.positional[0];
@@ -361,6 +414,7 @@ int main(int argc, char** argv) {
   if (cmd == "listen") return cmdListen(o);
   if (cmd == "devices") return cmdDevices();
   if (cmd == "record") return cmdRecord(o);
+  if (cmd == "channel") return cmdChannel(o);
   if (cmd == "rigs") return cmdRigs(o);
   if (cmd == "rig") return cmdRig(o);
   std::cerr << "unknown command " << cmd << "\n";

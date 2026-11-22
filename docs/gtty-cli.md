@@ -8,7 +8,7 @@ nav_order: 14
 `gtty-cli` is a command-line tool built on the same modem as the GUI. It encodes text to a WAV file, decodes recordings and live audio, records audio, lists devices and Hamlib rigs, and reads a rig's frequency. It is the tool for testing a setup and for comparing decoder settings on a recording with a known text.
 
 ```
-gtty-cli encode|decode|listen|record|devices|rigs|rig [options]
+gtty-cli encode|decode|listen|record|channel|devices|rigs|rig [options]
 gtty-cli --version
 ```
 
@@ -20,6 +20,7 @@ gtty-cli --version
 | `decode in.wav` | Decode a recording with every enabled engine and print each engine's text and statistics, then the vote |
 | `listen` | Decode live audio from an input device to standard output until Ctrl-C |
 | `record out.wav` | Capture live audio to a WAV file for `--seconds` (10 by default) |
+| `channel in.wav out.wav` | Pass a recording through a simulated HF channel: fading and noise |
 | `devices` | List PortAudio devices with their index, host API, channel counts and default sample rate |
 | `rigs [filter]` | List Hamlib rig models, optionally those whose manufacturer or name contains the filter |
 | `rig --model N --device DEV` | Open the rig, wait briefly and print frequency, mode, filter width and PTT state |
@@ -80,6 +81,7 @@ An option gtty-cli does not know is an error (exit status 2), not a file name. O
 | `--afc-gain G` | Fraction of the measured error applied per character |
 | `--corr-edge F`, `--corr-accept F` | Correlator start/stop cell threshold and acceptance score |
 | `--engines all` | Run every engine, including the codec2 comparison decoder |
+| `--vote majority|soft` | How the best guess merges the engines: a majority per character (the default), or the engines' soft bit decisions added up |
 | `--start S`, `--limit S` | Decode only from `S` seconds in, for `S` seconds |
 | `--quiet` | Print statistics only, not the text |
 
@@ -104,6 +106,16 @@ An option gtty-cli does not know is an error (exit status 2), not a file name. O
 {: .note }
 Close the GUI before running `gtty-cli rig`: only one program may use the CAT port. Alternatively run `rigctld` and use model 2 in both.
 
+### Channel simulator
+
+`gtty-cli channel in.wav out.wav` passes a recording through a simulated HF channel (two fading paths, then noise).
+
+| Option | Meaning | Default |
+|---|---|---|
+| `--profile KEY` | Channel condition; `gtty-cli channel` alone lists them | `mid-moderate` |
+| `--snr DB` | Signal-to-noise ratio in 3 kHz; no noise is added without it | none |
+| `--seed N` | Another seed gives another stretch of fading and noise | 1 |
+
 ## Benchmarking decoder settings
 
-`tools/bench_rtty.py` in the source tree runs `gtty-cli decode` over recordings with known content and reports the character error rate per engine, so settings can be compared on real signals. See [Development](development.md#tuning-the-decoders-on-your-own-recordings).
+`tools/bench_rtty.py` in the source tree runs `gtty-cli decode` over recordings with known content and reports the character error rate per engine, so settings can be compared on real signals. See [Development](development.md#tuning-the-decoders-on-your-own-recordings). `bench_channel` in the build tree does the same on simulated fading channels, where the conditions repeat exactly: see [Development](development.md#measuring-the-decoders-on-a-simulated-hf-channel).

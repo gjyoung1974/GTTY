@@ -3,6 +3,7 @@ add_library(gttycore STATIC
   version.cpp
   dsp/resampler.cpp
   dsp/spectrum.cpp
+  dsp/hf_channel.cpp
   modem/rtty_modulator.cpp
   modem/matched_filter_demod.cpp
   modem/decoder_bank.cpp

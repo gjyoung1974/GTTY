@@ -74,6 +74,7 @@ class MatchedFilterDemod : public RttyDemodulator {
   // quality / squelch
   float quality_ = 0;
   float confSum_ = 0;        // sum of |bit mean| over the data bits of the current character
+  float soft_[5] = {0, 0, 0, 0, 0};   // the data bits' means, for the voter
   uint64_t pos_ = 0;         // input samples processed
   uint64_t chars_ = 0, framingErrors_ = 0;
 

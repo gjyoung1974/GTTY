@@ -13,7 +13,7 @@ nav_order: 17
 | `src/cli` | `gtty-cli` |
 | `src/gui` | The GTK4/libadwaita application: main window, Preferences dialog, waterfall, XY scope, settings and configurations |
 | `tests` | ctest unit tests: Baudot, modem loopback with noise, offset and resampling, voter, correlator, skimmer, macros, callsign recognition, profiles, cluster parsing, XML-RPC, WSJT-X encoding, the spot feed, the logbook server client, CW, callbook |
-| `tools` | `bench_rtty.py`, the decoder benchmark |
+| `tools` | `bench_rtty.py`, the decoder benchmark on recordings (`tests/bench_channel.cpp` is the one on simulated channels) |
 | `packaging` | Man pages, Debian changelog and copyright, AppImage build script |
 | `data` | Desktop entry, AppStream metainfo, icon |
 | `docs` | This manual and the architecture notes |
@@ -86,6 +86,28 @@ A source tarball made by `git archive` or downloaded from GitHub carries its ver
 7. **Beware of the scorer.** It keeps only lines that resemble the reference, strips a leading counter and counts substitutions, deletions and insertions over the reference length. Short recordings are dominated by the lock-up at the start; use at least a few minutes.
 
 The scorer can also score another program's output: `tools/bench_rtty.py --score-file mmtty.txt --ref "<beacon text>"`.
+
+## Measuring the decoders on a simulated HF channel
+
+Recordings show what a decoder does on one band on one evening. To compare two versions of a decoder the conditions have to be the same both times, and that takes a channel simulator. `src/core/dsp/hf_channel.h` implements the Watterson model used for HF modem tests: two paths of equal power, each fading independently (Rayleigh, Gaussian Doppler spectrum), the second delayed against the first, with white noise added for a signal-to-noise ratio stated in 3 kHz. The profiles are the conditions of ITU-R F.1487; the mid-latitude ones are the "good", "moderate" and "poor" channels of CCIR 520.
+
+`build/tests/bench_channel` sends contest traffic through each channel at several signal-to-noise ratios and prints the character error rate of engines A and B, the Correlator and the best guess (both ways of merging, see `Voter::Combine`):
+
+```
+build/tests/bench_channel                                   # every profile, a few minutes
+build/tests/bench_channel --profiles awgn,mid-moderate --snr -6,0,6 --seeds 4
+build/tests/bench_channel --scenario contest --detail       # error breakdown
+build/tests/bench_channel --profiles mid-moderate --snr 0 --seeds 1 --messages 8 --show
+```
+
+- `--scenario text` is one long transmission; `contest` is short transmissions with noise between them, which also counts what is printed when nobody is sending. The default runs both.
+- The error rate is the edit distance between the text sent and the text printed, over the length of the text sent. Each seed is another stretch of fading and noise; with the default three seeds a point is about 1,650 characters, so differences under a point or two are not significant. Raise `--seeds` before believing a small one.
+- `--detail` adds, for the Correlator and the best guess, the rate with shift errors forgiven and with spaces ignored as well, which shows how much of the loss is not in the bits.
+- `--show` prints the text sent and what each column printed; `--csv` writes one line per point and engine.
+
+It is not run by `ctest`: it measures, it does not pass or fail. Run it with the same arguments before and after a change to the decoders or the vote.
+
+`gtty-cli channel in.wav out.wav --profile mid-moderate --snr 0` puts any recording through the same channel, for listening, for the waterfall, or to hand the same file to another program and score its output with `tools/bench_rtty.py --score-file`.
 
 ## Architecture
 
