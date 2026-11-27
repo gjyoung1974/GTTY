@@ -10,6 +10,12 @@
     AFSK and true FSK keying, Hamlib rig control, logging with ADIF export, GridTracker2 integration
     and an fldigi-compatible XML-RPC interface for loggers.</p>
   </description>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Decoders, waterfall and XY scope with the Skimmer busy on 20 m</caption>
+      <image type="source" width="1920" height="820">https://raw.githubusercontent.com/gjyoung1974/GTTY/main/docs/screenshot.png</image>
+    </screenshot>
+  </screenshots>
   <launchable type="desktop-id">io.github.gtty.desktop</launchable>
   <url type="homepage">https://github.com/gjyoung1974/gtty</url>
   <url type="bugtracker">https://github.com/gjyoung1974/gtty/issues</url>
