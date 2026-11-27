@@ -91,15 +91,34 @@ HOOK
 
 export OUTPUT="gtty-${ARCH}.AppImage"
 
+# .DirIcon is the icon file managers and the AppImage catalog show: it must be a PNG
+# (an SVG is rejected). Make it a real file at the AppDir root, not a symlink to the SVG.
+PNG_ICON="usr/share/icons/hicolor/256x256/apps/io.github.gtty.png"
+set_diricon() {
+  rm -f "$APPDIR/.DirIcon" "$APPDIR/io.github.gtty.svg"
+  cp "$APPDIR/$PNG_ICON" "$APPDIR/io.github.gtty.png"
+  cp "$APPDIR/$PNG_ICON" "$APPDIR/.DirIcon"
+}
+check_diricon() {  # the image must carry a PNG .DirIcon
+  local dir; dir="$(mktemp -d)"
+  (cd "$dir" && APPIMAGE_EXTRACT_AND_RUN=1 "$OLDPWD/$OUTPUT" --appimage-extract .DirIcon >/dev/null)
+  if ! file -L "$dir/squashfs-root/.DirIcon" | grep -q "PNG image"; then
+    echo "$OUTPUT has no PNG .DirIcon" >&2; rm -rf "$dir"; exit 1
+  fi
+  rm -rf "$dir"
+}
+
 if [ "$BUNDLER" = linuxdeploy ]; then
   # APPIMAGE_EXTRACT_AND_RUN lets linuxdeploy run inside containers without FUSE.
   APPIMAGE_EXTRACT_AND_RUN=1 "$TOOLS/linuxdeploy" --appdir "$APPDIR" \
     --desktop-file "$APPDIR/usr/share/applications/io.github.gtty.desktop" \
-    --icon-file "$APPDIR/usr/share/icons/hicolor/scalable/apps/io.github.gtty.svg" \
+    --icon-file "$APPDIR/usr/share/icons/hicolor/256x256/apps/io.github.gtty.png" \
     --executable "$APPDIR/usr/bin/gtty" --executable "$APPDIR/usr/bin/gtty-cli" \
     --executable "$APPDIR/usr/bin/gdk-pixbuf-query-loaders" \
-    --deploy-deps-only "$APPDIR/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders" \
-    --output appimage
+    --deploy-deps-only "$APPDIR/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+  set_diricon
+  APPIMAGE_EXTRACT_AND_RUN=1 "$TOOLS/linuxdeploy" --appdir "$APPDIR" --output appimage
+  check_diricon
   echo "built $OUTPUT"
   exit 0
 fi
@@ -173,8 +192,7 @@ set_rpath '$ORIGIN/..' "$APPDIR"/usr/lib/hamlib/*.so*
 
 # --- AppDir entry points: AppRun, and the desktop file and icon at the top level.
 ln -sf usr/share/applications/io.github.gtty.desktop "$APPDIR/io.github.gtty.desktop"
-ln -sf usr/share/icons/hicolor/scalable/apps/io.github.gtty.svg "$APPDIR/io.github.gtty.svg"
-ln -sf io.github.gtty.svg "$APPDIR/.DirIcon"
+set_diricon
 cat > "$APPDIR/AppRun" <<'APPRUN'
 #!/bin/sh
 # gtty AppImage entry point: set up the bundled GTK4 resources, then start gtty.
