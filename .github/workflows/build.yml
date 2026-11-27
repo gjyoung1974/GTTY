@@ -258,8 +258,9 @@ jobs:
               runtime_size="$(stat -c %s packaging/tools/uruntime-*-riscv64)"
               unsquashfs -o "$runtime_size" -d squashfs-root gtty-riscv64.AppImage >/dev/null
               test -x squashfs-root/AppRun
-              ldd squashfs-root/usr/bin/gtty | grep "squashfs-root/usr/lib/libgtk-4"
-              ldd squashfs-root/usr/bin/gtty-cli | grep "squashfs-root/usr/lib/libhamlib"
+              # ldd reports $ORIGIN/../lib paths unnormalised: squashfs-root/usr/bin/../lib/...
+              ldd squashfs-root/usr/bin/gtty | grep -E "squashfs-root/usr/(bin/\.\./)?lib/libgtk-4"
+              ldd squashfs-root/usr/bin/gtty-cli | grep -E "squashfs-root/usr/(bin/\.\./)?lib/libhamlib"
               ./squashfs-root/usr/bin/gtty-cli rigs "ft-710" | head -2
               ./squashfs-root/usr/bin/gtty-cli encode "CQ CQ DE N0CALL K" /tmp/cq.wav
               ./squashfs-root/usr/bin/gtty-cli decode /tmp/cq.wav | tee /tmp/decoded.txt
