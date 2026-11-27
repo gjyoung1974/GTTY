@@ -64,7 +64,7 @@ MainWindow::MainWindow(AdwApplication* app)
   openAudio();
   openRig();
   openGridTracker();
-  openRpc();
+  deferRpcUntilFirstFrame();
   openSpotServer();
   openPskReporter();
   openSessionLog();
@@ -79,6 +79,8 @@ MainWindow::MainWindow(AdwApplication* app)
 }
 
 MainWindow::~MainWindow() {
+  if (rpcFallbackId_) g_source_remove(rpcFallbackId_);
+  if (rpcPaintClock_) g_signal_handler_disconnect(rpcPaintClock_, rpcPaintId_);
   rpc_.stop();
   spotServer_.stop();
   pskr_.close(static_cast<uint32_t>(g_get_real_time() / G_USEC_PER_SEC));
@@ -2723,7 +2725,40 @@ struct RpcCall {
 };
 }  // namespace
 
+void MainWindow::deferRpcUntilFirstFrame() {
+  // Listen only once the window has painted its first frame. Until then the main loop
+  // can be busy for seconds on a slow machine (software GL on riscv64/loong64, issue #77):
+  // a request that arrived then waited the 3 s in rpcHandler() and failed with "gtty did
+  // not respond". The first tick is no sign of readiness, since ticks outrank painting.
+  // A logger that connects early is refused, which it already reads as "not running yet".
+  g_signal_connect(window_, "realize", G_CALLBACK(+[](GtkWidget* w, gpointer p) {
+    auto* self = static_cast<MainWindow*>(p);
+    GdkFrameClock* clock = gtk_widget_get_frame_clock(w);
+    if (!clock || self->rpcAllowed_) return;
+    self->rpcPaintClock_ = clock;
+    self->rpcPaintId_ = g_signal_connect(clock, "after-paint", G_CALLBACK(+[](GdkFrameClock*, gpointer q) {
+      static_cast<MainWindow*>(q)->allowRpc();
+    }), self);
+  }), this);
+  // Should no frame ever be painted (an unmapped window), do not stay silent for good.
+  rpcFallbackId_ = g_timeout_add_seconds(15, +[](gpointer p) -> gboolean {
+    auto* self = static_cast<MainWindow*>(p);
+    self->rpcFallbackId_ = 0;
+    self->allowRpc();
+    return G_SOURCE_REMOVE;
+  }, this);
+}
+
+void MainWindow::allowRpc() {
+  if (rpcPaintClock_) { g_signal_handler_disconnect(rpcPaintClock_, rpcPaintId_); rpcPaintClock_ = nullptr; }
+  if (rpcFallbackId_) { g_source_remove(rpcFallbackId_); rpcFallbackId_ = 0; }
+  if (rpcAllowed_) return;
+  rpcAllowed_ = true;
+  openRpc();
+}
+
 void MainWindow::openRpc() {
+  if (!rpcAllowed_) return;   // settings applied before the first frame: allowRpc() opens it
   // Called whenever settings are applied (Preferences closing, profile switch). Restart the
   // server only if its own settings changed: stopping it drops the clients' connections, and
   // a request in flight then waits for this (main) thread, which is waiting in stop() for the

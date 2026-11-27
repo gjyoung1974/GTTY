@@ -174,6 +174,8 @@ class MainWindow {
   std::string unsentTxText() const;
   // fldigi-compatible XML-RPC
   void openRpc();
+  void deferRpcUntilFirstFrame();
+  void allowRpc();
   xmlrpc::Value rpcHandler(const std::string& method, const std::vector<xmlrpc::Value>& params);  // server thread
   xmlrpc::Value rpcDispatch(const std::string& method, const std::vector<xmlrpc::Value>& params); // main thread
 
@@ -333,6 +335,10 @@ class MainWindow {
   std::vector<double> notches_;
   xmlrpc::Server rpc_;
   std::string rpcOpenAt_;                     // "bind:port" rpc_ is serving, so openRpc() leaves it be when unchanged
+  bool rpcAllowed_ = false;                   // the first frame is painted: XML-RPC may listen (issue #77)
+  GdkFrameClock* rpcPaintClock_ = nullptr;    // waiting on its after-paint for that first frame
+  gulong rpcPaintId_ = 0;
+  guint rpcFallbackId_ = 0;                   // opens XML-RPC anyway should no frame be painted
   RecordForwarder fllog_;
   RecordForwarder xlog_{xlogSend};
   SpotServer spotServer_;

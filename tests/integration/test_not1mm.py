@@ -172,6 +172,15 @@ class Station:
             self.stop()
             raise RuntimeError("gtty did not open its XML-RPC port")
         self.url = f"http://127.0.0.1:{self.rpc_port}"
+        if not wait_for(self.answers, 30):            # slow CPUs: the first frame can take seconds (issue #77)
+            self.stop()
+            raise RuntimeError("gtty opened its XML-RPC port but does not answer")
+
+    def answers(self):
+        try:
+            return bool(self.trx())
+        except (xmlrpc.client.Fault, OSError):
+            return False
 
     def rpc(self):
         return xmlrpc.client.ServerProxy(self.url)
